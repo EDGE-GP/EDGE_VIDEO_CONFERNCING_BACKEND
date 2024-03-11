@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import {
   forgotPassword,
@@ -8,6 +9,8 @@ import {
   validate,
 } from "../controllers/authController";
 
+import { getAllUsers, getOneUser,updateUser,deleteUser } from "../controllers/userController";
+
 const router: Router = Router();
 
 router.post("/register", signup);
@@ -16,5 +19,7 @@ router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
 router.get("/validate", validate);
 router.get("/logout", logout);
+router.get("/", getAllUsers);
+router.get("/:id", getOneUser).patch("/:id", updateUser).delete("/:id", deleteUser);
 
 export default router;
