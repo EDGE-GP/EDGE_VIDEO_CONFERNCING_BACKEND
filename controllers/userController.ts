@@ -102,3 +102,40 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
       next(new AppError(error.message, 404));
     }
   };
+
+  export const search = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const searchTerm = req.body.search as string;
+        // console.log(req.query);
+      
+        const users: User[] = await prisma.user.findMany({
+          where: {
+            OR: [
+              {
+                name: {
+                  contains: searchTerm,
+                },
+              },
+              {
+                email: {
+                  contains: searchTerm,
+                },
+              },
+            ],
+          },
+        });
+      
+        res.status(200).json({
+          status: "success",
+          results: users.length,
+          data: {
+            users,
+          },
+        });
+      }catch(error:any)
+      {
+        next(new AppError(error.message, 404));
+      }
+
+
+  };

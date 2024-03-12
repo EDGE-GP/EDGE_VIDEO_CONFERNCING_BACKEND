@@ -10,6 +10,7 @@ import dotenv from "dotenv";
 import errorHandler from "./middleware/errorHandler";
 import cookieParser from "cookie-parser";
 import userRouter from "./routes/userRoutes";
+import meetingRouter from "./routes/meetingRoutes";
 
 declare global {
   namespace NodeJS {
@@ -48,5 +49,6 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 app.use("/api/v1/users", userRouter);
+app.use("/api/v1/meetings", meetingRouter);
 app.use(errorHandler);
 export default app;
