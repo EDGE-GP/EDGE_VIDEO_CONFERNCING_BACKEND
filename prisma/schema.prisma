@@ -24,4 +24,17 @@ model User {
   photo                String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
+  meetings             Meeting[]  
+}
+ 
+model Meeting {
+  id              String      @id @default(uuid())
+  createdAt       DateTime    @default(now())
+  title           String
+  description     String?
+  location        String?
+  startTime       DateTime?
+  endTime         DateTime?
+  conferenceLink  String?
+  participants    User[]     
 }

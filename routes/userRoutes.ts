@@ -9,7 +9,7 @@ import {
   validate,
 } from "../controllers/authController";
 
-import { getAllUsers, getOneUser,updateUser,deleteUser } from "../controllers/userController";
+import { getAllUsers, getOneUser,updateUser,deleteUser,search } from "../controllers/userController";
 
 const router: Router = Router();
 
@@ -21,5 +21,7 @@ router.get("/validate", validate);
 router.get("/logout", logout);
 router.get("/", getAllUsers);
 router.get("/:id", getOneUser).patch("/:id", updateUser).delete("/:id", deleteUser);
+router.post("/search", search);
+
 
 export default router;
