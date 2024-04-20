@@ -35,12 +35,13 @@ model Meeting {
   activityFlag      String
   conferenceId      String
   startTime         DateTime @default(now())
-  saveConversation  Boolean
-  enableInterpreter Boolean
-  enableAvatar      Boolean
+  saveConversation  Boolean  @default(true)
+  enableInterpreter Boolean  @default(false)
+  enableAvatar      Boolean  @default(false)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
   participants      User[]   @relation("MeetingParticipants")
   organizer         User     @relation("AdminMeeting", fields: [oranizerId], references: [id])
   oranizerId        String
+  
 }
