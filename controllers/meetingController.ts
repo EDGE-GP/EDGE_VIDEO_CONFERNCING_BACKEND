@@ -89,11 +89,6 @@ export const createMeeting = async (
         saveConversation,
         conferenceId: generateRandomString(),
         oranizerId: decoded.id,
-        // organizer: {
-        //   connect: {
-        //     id: decoded.id,
-        //   },
-        // },
         participants: {
           connect: participants.map((participantId: string) => ({
             id: participantId,
