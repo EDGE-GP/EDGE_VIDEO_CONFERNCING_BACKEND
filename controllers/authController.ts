@@ -54,12 +54,13 @@ export const login = async (
         email,
       },
     });
+
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return next(new AppError("Incorrect email or password", 401));
     }
     createSendToken(user, 200, res);
   } catch (err: any) {
-    next(new AppError(err.message, 400));
+    next(new AppError("Something went wrong", 400));
   }
 };
 

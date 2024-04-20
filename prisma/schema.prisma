@@ -24,17 +24,23 @@ model User {
   photo                String?
   createdAt            DateTime  @default(now())
   updatedAt            DateTime  @updatedAt
-  meetings             Meeting[]  
+  meetings             Meeting[] @relation("MeetingParticipants")
+  adminMeetings        Meeting[] @relation("AdminMeeting")
 }
- 
+
 model Meeting {
-  id              String      @id @default(uuid())
-  createdAt       DateTime    @default(now())
-  title           String
-  description     String?
-  location        String?
-  startTime       DateTime?
-  endTime         DateTime?
-  conferenceLink  String?
-  participants    User[]     
+  id                String   @id @default(uuid())
+  title             String
+  description       String?
+  activityFlag      String
+  conferenceId      String
+  startTime         DateTime @default(now())
+  saveConversation  Boolean
+  enableInterpreter Boolean
+  enableAvatar      Boolean
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  participants      User[]   @relation("MeetingParticipants")
+  organizer         User     @relation("AdminMeeting", fields: [oranizerId], references: [id])
+  oranizerId        String
 }
