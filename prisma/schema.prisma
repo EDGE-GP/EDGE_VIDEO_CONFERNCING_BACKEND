@@ -43,5 +43,4 @@ model Meeting {
   participants      User[]   @relation("MeetingParticipants")
   organizer         User     @relation("AdminMeeting", fields: [oranizerId], references: [id])
   oranizerId        String
-  
 }

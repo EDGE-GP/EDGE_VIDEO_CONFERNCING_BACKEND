@@ -96,6 +96,7 @@ export const createMeeting = async (
         },
       },
     });
+    // TODO: Invitation should be created and sent to participants' email
     if (!meeting) {
       return next(
         new AppError("Please verify all fields and meeting settings", 400)
