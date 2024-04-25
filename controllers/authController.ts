@@ -39,6 +39,75 @@ const createSendToken = async (
   });
 };
 
+export const protect = async (
+  req: Request<Request, User>,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    let token;
+    if (
+      req.headers.authorization &&
+      req.headers.authorization.startsWith("Bearer")
+    ) {
+      token = req.headers.authorization.split(" ")[1];
+    } else if (req.cookies.jwt) {
+      token = req.cookies.jwt;
+    }
+    if (!token) {
+      return next(new AppError("You are not logged in", 401));
+    }
+    const jwtVerifyPromisified = (token: string, secret: string) => {
+      return new Promise((resolve, reject) => {
+        jwt.verify(token, secret, {}, (err, payload) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(payload);
+          }
+        });
+      });
+    };
+    const decoded: any = await jwtVerifyPromisified(
+      token,
+      process.env.JWT_SECRET
+    );
+    const freshUser = await prisma.user.findUnique({
+      where: {
+        id: decoded.id,
+      },
+    });
+
+    if (!freshUser)
+      return next(
+        new AppError("The User belonging to the token no longer exists!", 404)
+      );
+
+    if (freshUser.passwordChangedAt) {
+      const changedTimestamp: number = Math.floor(
+        freshUser.passwordChangedAt.getTime() / 1000
+      );
+
+      console.log(decoded.iat < changedTimestamp);
+      console.log(decoded.iat, changedTimestamp);
+      if (decoded.iat < changedTimestamp) {
+        return next(
+          new AppError(
+            "User recently changed password! Please log in again",
+            401
+          )
+        );
+      }
+    }
+    req.user = freshUser;
+    res.locals = freshUser;
+    next();
+  } catch (err) {
+    console.log(err);
+    next(err);
+  }
+};
+
 export const login = async (
   req: Request,
   res: Response,

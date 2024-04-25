@@ -4,7 +4,7 @@ import { Meeting } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import jwt, { decode } from "jsonwebtoken";
 
-const generateRandomString = (): string => {
+const generateRandomString = async (): Promise<string> => {
   const getRandomUpperCaseLetter = () =>
     String.fromCharCode(Math.floor(Math.random() * 26) + 65); // Random uppercase letter generator
 
@@ -17,6 +17,17 @@ const generateRandomString = (): string => {
       randomString += "-";
     }
   }
+
+  const existingMeeting = await prisma.meeting.findUnique({
+    where: {
+      conferenceId: randomString,
+    },
+  });
+
+  if (existingMeeting) {
+    return generateRandomString();
+  }
+
   return randomString;
 };
 
@@ -87,26 +98,43 @@ export const createMeeting = async (
         enableAvatar,
         enableInterpreter,
         saveConversation,
-        conferenceId: generateRandomString(),
+        conferenceId: await generateRandomString(),
         oranizerId: decoded.id,
         participants: {
-          connect: participants.map((participantId: string) => ({
-            id: participantId,
-          })),
+          connect: {
+            id: decoded.id,
+          },
         },
       },
     });
-    // TODO: Invitation should be created and sent to participants' email
     if (!meeting) {
       return next(
         new AppError("Please verify all fields and meeting settings", 400)
       );
     }
 
+    // TODO: Invitation should be created and sent to participants' email
+    const invitationsPromises = participants.map((participant: string) =>
+      prisma.invitation.create({
+        data: {
+          meetingId: meeting.id,
+          userId: participant,
+          status: "pending",
+        },
+        select: {
+          user: true,
+        },
+      })
+    );
+
+    const invitations = await Promise.all(invitationsPromises);
+    console.log({ invitations });
+
     res.status(201).json({
       status: "success",
       data: {
         meeting,
+        invitations,
       },
     });
   } catch (error: any) {

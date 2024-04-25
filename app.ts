@@ -11,6 +11,7 @@ import errorHandler from "./middleware/errorHandler";
 import cookieParser from "cookie-parser";
 import userRouter from "./routes/userRoutes";
 import meetingRouter from "./routes/meetingRoutes";
+import { User } from "@prisma/client";
 
 declare global {
   namespace NodeJS {
@@ -19,6 +20,11 @@ declare global {
       NODE_ENV: "development" | "production";
       JWT_SECRET: string;
       JWT_EXPIRES_IN: string;
+    }
+  }
+  namespace Express {
+    interface Request {
+      user: User;
     }
   }
 }
