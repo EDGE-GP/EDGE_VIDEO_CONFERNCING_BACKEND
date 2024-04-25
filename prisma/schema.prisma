@@ -3,7 +3,6 @@
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,34 +12,72 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum InvitationStatus {
+  pending
+  accepted
+  rejected
+}
+
+enum FriendshipStatus {
+  pending
+  accepted
+  rejected
+}
+
 model User {
-  id                   String    @id @default(uuid())
-  email                String    @unique
+  id                   String       @id @default(uuid())
+  email                String       @unique
   name                 String
   password             String
-  passwordChangedAt    DateTime  @default(now())
-  passwordResetToken   String?   @unique
+  passwordChangedAt    DateTime     @default(now())
+  passwordResetToken   String?      @unique
   passwordResetExpires DateTime?
   photo                String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
-  meetings             Meeting[] @relation("MeetingParticipants")
-  adminMeetings        Meeting[] @relation("AdminMeeting")
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  meetings             Meeting[]    @relation("MeetingParticipants")
+  adminMeetings        Meeting[]    @relation("AdminMeeting")
+  Invitation           Invitation[]
+  friendsOf            Friendship[] @relation("FriendshipsOf")
+  friendsTo            Friendship[] @relation("FriendshipsTo")
+}
+
+model Friendship {
+  id        String           @id @default(uuid())
+  user1     User             @relation("FriendshipsOf", fields: [user1Id], references: [id])
+  user1Id   String
+  user2     User             @relation("FriendshipsTo", fields: [user2Id], references: [id])
+  user2Id   String
+  status    FriendshipStatus @default(pending)
+  createdAt DateTime         @default(now())
 }
 
 model Meeting {
-  id                String   @id @default(uuid())
+  id                String       @id @default(uuid())
   title             String
   description       String?
   activityFlag      String
-  conferenceId      String
-  startTime         DateTime @default(now())
-  saveConversation  Boolean  @default(true)
-  enableInterpreter Boolean  @default(false)
-  enableAvatar      Boolean  @default(false)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-  participants      User[]   @relation("MeetingParticipants")
-  organizer         User     @relation("AdminMeeting", fields: [oranizerId], references: [id])
+  conferenceId      String       @unique
+  startTime         DateTime     @default(now())
+  saveConversation  Boolean      @default(true)
+  enableInterpreter Boolean      @default(false)
+  enableAvatar      Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  participants      User[]       @relation("MeetingParticipants")
+  organizer         User         @relation("AdminMeeting", fields: [oranizerId], references: [id])
   oranizerId        String
+  Invitation        Invitation[]
+}
+
+model Invitation {
+  id        String           @id @default(uuid())
+  userId    String
+  meetingId String
+  //status which is an enum of 'pending', 'accepted', 'rejected'
+  status    InvitationStatus @default(pending)
+  meeting   Meeting          @relation(fields: [meetingId], references: [id])
+  user      User             @relation(fields: [userId], references: [id])
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
