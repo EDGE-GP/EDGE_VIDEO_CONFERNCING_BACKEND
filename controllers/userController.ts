@@ -209,6 +209,15 @@ export const acceptFriendRequest = async (
       return next(new AppError("No friendship found with this id", 404));
     }
 
+    if (friendship.status !== "pending") {
+      return next(
+        new AppError(
+          "Can't preform this operation, friendship request has already been modified",
+          400
+        )
+      );
+    }
+
     if (user.id !== friendship.user2Id) {
       return next(
         new AppError("This friendship request doesn't belong to this user", 400)
@@ -254,6 +263,14 @@ export const rejectFriendRequest = async (
     if (!friendship) {
       return next(new AppError("No friendship found with this id", 404));
     }
+    if (friendship.status !== "pending") {
+      return next(
+        new AppError(
+          "Can't preform this operation, friendship request has already been modified",
+          400
+        )
+      );
+    }
 
     if (user.id !== friendship.user2Id) {
       return next(
@@ -273,6 +290,115 @@ export const rejectFriendRequest = async (
       data: {
         updatedFriendship,
       },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+
+export const deleteFriendRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { friendshipId } = req.body;
+    const { user } = req;
+    if (!friendshipId) {
+      return next(new AppError("Please provide all required fields", 400));
+    }
+    const friendship = await prisma.friendship.findUnique({
+      where: {
+        id: friendshipId,
+      },
+    });
+
+    if (!friendship) {
+      return next(new AppError("No friendship found with this id", 404));
+    }
+    if (friendship.status === "pending") {
+      return next(
+        new AppError(
+          "Can't preform this operation, Friendship request is still pending",
+          400
+        )
+      );
+    }
+
+    const updatedFriendship = await prisma.friendship.update({
+      where: {
+        id: friendshipId,
+      },
+      data: {
+        status: "deleted",
+        user1Id:
+          friendship.user1Id === user.id
+            ? friendship.user1Id
+            : friendship.user2Id,
+        user2Id:
+          friendship.user1Id === user.id
+            ? friendship.user2Id
+            : friendship.user1Id,
+      },
+    });
+    res.status(200).json({
+      status: "Success",
+      data: {
+        updatedFriendship,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+
+export const blockFriendRequest = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { blockedUserId } = req.body;
+    if (!blockedUserId) {
+      return next(new AppError("Please provide all required values", 400));
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        blockedUsers: {
+          connect: { id: blockedUserId },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        photo: true,
+        blockedUsers: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photo: true,
+          },
+        },
+        blockedBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photo: true,
+          },
+        },
+      },
+    });
+    res.status(200).json({
+      status: "Success",
+      user: updatedUser,
     });
   } catch (error: any) {
     next(new AppError(error.message, 500));

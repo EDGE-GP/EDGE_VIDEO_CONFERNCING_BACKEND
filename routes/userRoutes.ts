@@ -18,6 +18,8 @@ import {
   createFriendshipRequest,
   acceptFriendRequest,
   rejectFriendRequest,
+  deleteFriendRequest,
+  blockFriendRequest,
 } from "../controllers/userController";
 
 const router: Router = Router();
@@ -39,5 +41,8 @@ router.get("/search/:searchTerm", searchUsers);
 router.post("/friendship/request", createFriendshipRequest);
 router.put("/friendship/accept", acceptFriendRequest);
 router.put("/friendship/reject", rejectFriendRequest);
+router.put("/friendship/delete", deleteFriendRequest);
+router.post("/friendship/block", blockFriendRequest);
+// router.delete
 
 export default router;

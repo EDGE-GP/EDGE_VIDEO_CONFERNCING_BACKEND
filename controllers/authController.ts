@@ -76,6 +76,10 @@ export const protect = async (
       where: {
         id: decoded.id,
       },
+      include: {
+        blockedUsers: true,
+        blockedBy: true,
+      },
     });
 
     if (!freshUser)
@@ -129,7 +133,7 @@ export const login = async (
     }
     createSendToken(user, 200, res);
   } catch (err: any) {
-    next(new AppError("Something went wrong", 400));
+    next(new AppError(err.message, 400));
   }
 };
 
