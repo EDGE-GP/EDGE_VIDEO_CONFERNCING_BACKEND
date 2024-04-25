@@ -122,7 +122,14 @@ export const createMeeting = async (
           status: "pending",
         },
         select: {
-          user: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              photo: true,
+            },
+          },
         },
       })
     );

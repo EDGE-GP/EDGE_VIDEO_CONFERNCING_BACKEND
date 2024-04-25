@@ -22,6 +22,7 @@ enum FriendshipStatus {
   pending
   accepted
   rejected
+  deleted
 }
 
 model User {
@@ -40,6 +41,8 @@ model User {
   Invitation           Invitation[]
   friendsOf            Friendship[] @relation("FriendshipsOf")
   friendsTo            Friendship[] @relation("FriendshipsTo")
+  blockedUsers         User[]       @relation("BlockedUsers")
+  blockedBy            User[]       @relation("BlockedUsers")
 }
 
 model Friendship {
