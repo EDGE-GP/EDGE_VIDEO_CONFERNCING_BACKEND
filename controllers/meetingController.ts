@@ -3,6 +3,7 @@ import prisma from "../prisma";
 import { Meeting } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import jwt, { decode } from "jsonwebtoken";
+import { addHours, parseISO } from "date-fns";
 
 const generateRandomString = async (): Promise<string> => {
   const getRandomUpperCaseLetter = () =>
@@ -31,12 +32,13 @@ const generateRandomString = async (): Promise<string> => {
   return randomString;
 };
 
-export const createMeeting = async (
+export const scheduleMeeting = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
+    const { user } = req;
     const {
       title,
       description,
@@ -46,49 +48,9 @@ export const createMeeting = async (
       enableInterpreter,
       saveConversation,
       participants,
+      language,
     } = req.body;
-    // if (
-    //   !title ||
-    //   !startTime ||
-    //   !activityFlag ||
-    //   !enableAvatar ||
-    //   !enableInterpreter ||
-    //   !saveConversation
-    // ) {
-    //   return next(new AppError("Please provide all the required fields", 400));
-    // }
-    if (!title || !startTime || !activityFlag || !participants) {
-      return next(new AppError("Please provide title", 400));
-    }
-    let token;
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
-    } else if (req.cookies.jwt) {
-      token = req.cookies.jwt;
-    }
-    // console.log(token);
-    if (!token) {
-      return next(new AppError("You are not logged in", 401));
-    }
-    const jwtVerifyPromisified = (token: string, secret: string) => {
-      return new Promise((resolve, reject) => {
-        jwt.verify(token, secret, {}, (err, payload) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve(payload);
-          }
-        });
-      });
-    };
-    const decoded: any = await jwtVerifyPromisified(
-      token,
-      process.env.JWT_SECRET
-    );
-    console.log(decoded.id);
+
     const meeting = await prisma.meeting.create({
       data: {
         title,
@@ -98,11 +60,12 @@ export const createMeeting = async (
         enableAvatar,
         enableInterpreter,
         saveConversation,
+        language,
         conferenceId: await generateRandomString(),
-        oranizerId: decoded.id,
+        oranizerId: user.id,
         participants: {
           connect: {
-            id: decoded.id,
+            id: user.id,
           },
         },
       },
@@ -135,8 +98,6 @@ export const createMeeting = async (
     );
 
     const invitations = await Promise.all(invitationsPromises);
-    console.log({ invitations });
-
     res.status(201).json({
       status: "success",
       data: {
@@ -146,7 +107,7 @@ export const createMeeting = async (
     });
   } catch (error: any) {
     console.log(error.message);
-    return next(new AppError("Something went wrong", 500));
+    return next(new AppError(error.message, 500));
   }
 };
 
@@ -180,6 +141,95 @@ export const getMeeting = async (
       },
     });
   } catch (error: any) {
-    next(new AppError("Something went wrong", 500));
+    next(new AppError(error.message, 500));
+  }
+};
+
+export const handleMeetingInvitation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { invitationId, status } = req.body;
+    const invitation = await prisma.invitation.findUnique({
+      where: {
+        id: invitationId,
+        userId: user.id,
+      },
+    });
+    if (!invitation) {
+      return next(
+        new AppError(
+          "No invitation found for that user with the provided id",
+          404
+        )
+      );
+    }
+    if (status === "accepted") {
+      await prisma.meeting.update({
+        where: {
+          id: invitation.meetingId,
+        },
+        data: {
+          participants: {
+            connect: {
+              id: user.id,
+            },
+          },
+        },
+      });
+    }
+    const updatedInvitation = await prisma.invitation.update({
+      where: {
+        id: invitationId,
+      },
+      data: {
+        status,
+      },
+      include: {
+        meeting: true,
+      },
+    });
+    res.status(200).json({
+      status: "success",
+      data: {
+        invitation: updatedInvitation,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+
+export const fetchUserMeetingInvitations = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const invitations = await prisma.invitation.findMany({
+      where: {
+        userId: user.id,
+      },
+    });
+    if (!invitations) {
+      return next(
+        new AppError(
+          "No invitation found for that user with the provided id",
+          404
+        )
+      );
+    }
+    res.status(200).json({
+      status: "success",
+      data: {
+        invitations,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
   }
 };
