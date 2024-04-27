@@ -18,6 +18,11 @@ enum InvitationStatus {
   rejected
 }
 
+enum MeetingLanguage {
+  English
+  Arabic
+}
+
 enum FriendshipStatus {
   pending
   accepted
@@ -56,21 +61,22 @@ model Friendship {
 }
 
 model Meeting {
-  id                String       @id @default(uuid())
+  id                String          @id @default(uuid())
   title             String
   description       String?
   activityFlag      String
-  conferenceId      String       @unique
-  startTime         DateTime     @default(now())
-  saveConversation  Boolean      @default(true)
-  enableInterpreter Boolean      @default(false)
-  enableAvatar      Boolean      @default(false)
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
-  participants      User[]       @relation("MeetingParticipants")
-  organizer         User         @relation("AdminMeeting", fields: [oranizerId], references: [id])
+  conferenceId      String          @unique
+  startTime         DateTime        @default(now())
+  saveConversation  Boolean         @default(true)
+  enableInterpreter Boolean         @default(false)
+  enableAvatar      Boolean         @default(false)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  participants      User[]          @relation("MeetingParticipants")
+  organizer         User            @relation("AdminMeeting", fields: [oranizerId], references: [id])
   oranizerId        String
   Invitation        Invitation[]
+  language          MeetingLanguage @default(English)
 }
 
 model Invitation {

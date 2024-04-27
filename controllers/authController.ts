@@ -119,9 +119,6 @@ export const login = async (
 ) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) {
-      return next(new AppError("Please provide email and password", 400));
-    }
     const user: User | null = await prisma.user.findFirst({
       where: {
         email,
@@ -143,31 +140,21 @@ export const signup = async (
   next: NextFunction
 ) => {
   try {
-    if (
-      !req.body.name ||
-      !req.body.email ||
-      !req.body.password ||
-      !req.body.confirmPassword
-    ) {
-      return next(new AppError("Please provide all required fields", 400));
-    }
-    if (req.body.password !== req.body.confirmPassword) {
-      return next(new AppError("Passwords do not match", 400));
-    }
+    const { name, email, password } = req.body;
     const existingUser: User | null = await prisma.user.findFirst({
       where: {
-        email: req.body.email,
+        email: email,
       },
     });
     if (existingUser) {
       return next(new AppError("User already exists", 400));
     }
-    const hashedPassword = await bcrypt.hash(req.body.password, 12);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const newUser: User = await prisma.user.create({
       data: {
-        name: req.body.name,
-        email: req.body.email,
+        name: name,
+        email: email,
         password: hashedPassword,
       },
     });
@@ -231,13 +218,6 @@ export const resetPassword = async (
     const { password, confirmPassword } = req.body;
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    if (!password || !confirmPassword) {
-      return next(new AppError("Please provide all required fields", 400));
-    }
-
-    if (password !== confirmPassword) {
-      return next(new AppError("Passwords do not match", 400));
-    }
     const user = await prisma.user.findFirst({
       where: {
         passwordResetToken: hashedToken,

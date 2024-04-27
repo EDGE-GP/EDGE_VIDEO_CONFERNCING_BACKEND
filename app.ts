@@ -56,5 +56,12 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/meetings", meetingRouter);
+app.use("*", (req, res, next) => {
+  res.status(404).json({
+    status: "fail",
+    message: `404 - Not Found. API '${req.originalUrl}' not found.`,
+  });
+});
+
 app.use(errorHandler);
 export default app;
