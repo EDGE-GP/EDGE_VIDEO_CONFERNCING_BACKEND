@@ -4,6 +4,7 @@ import { Meeting } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import jwt, { decode } from "jsonwebtoken";
 import { addHours, parseISO } from "date-fns";
+import { Invitation } from "@prisma/client";
 
 const generateRandomString = async (): Promise<string> => {
   const getRandomUpperCaseLetter = () =>
@@ -213,6 +214,36 @@ export const fetchUserMeetingInvitations = async (
     const invitations = await prisma.invitation.findMany({
       where: {
         userId: user.id,
+      },
+      select: {
+        id: true,
+        status: true,
+        meeting: {
+          select: {
+            activityFlag: true,
+            conferenceId: true,
+            description: true,
+            id: true,
+            startTime: true,
+            title: true,
+            participants: {
+              where: {
+                id: {
+                  not: user.id,
+                },
+              },
+              select: {
+                email: true,
+                name: true,
+                photo: true,
+                id: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
       },
     });
     if (!invitations) {
