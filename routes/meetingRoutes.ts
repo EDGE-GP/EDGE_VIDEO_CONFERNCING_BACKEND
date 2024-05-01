@@ -6,6 +6,7 @@ import {
   getMeeting,
   handleMeetingInvitation,
   fetchUserMeetingInvitations,
+  fetchUserMeetings,
 } from "../controllers/meetingController";
 import { validateData } from "../middleware/validation";
 import {
@@ -15,15 +16,14 @@ import {
 import { protect } from "../controllers/authController";
 
 router.use(protect);
+router.get("/", fetchUserMeetings);
 router.post("/schedule", validateData(scheduleMeetingSchema), scheduleMeeting);
-
 router.put(
   "/handle-invitation",
   validateData(handleMeetingInvitationsSchema),
   handleMeetingInvitation
 );
 router.get("/invitations", fetchUserMeetingInvitations);
-
 router.get("/:id", getMeeting);
 
 export default router;
