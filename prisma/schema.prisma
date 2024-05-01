@@ -73,8 +73,8 @@ model Meeting {
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
   participants      User[]          @relation("MeetingParticipants")
-  organizer         User            @relation("AdminMeeting", fields: [oranizerId], references: [id])
-  oranizerId        String
+  organizer         User            @relation("AdminMeeting", fields: [organizerId], references: [id])
+  organizerId       String
   Invitation        Invitation[]
   language          MeetingLanguage @default(English)
 }

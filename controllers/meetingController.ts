@@ -63,7 +63,7 @@ export const scheduleMeeting = async (
         saveConversation,
         language,
         conferenceId: await generateRandomString(),
-        oranizerId: user.id,
+        organizerId: user.id,
         participants: {
           connect: {
             id: user.id,
@@ -224,12 +224,16 @@ export const fetchUserMeetingInvitations = async (
             conferenceId: true,
             description: true,
             id: true,
+            organizerId: true,
             startTime: true,
             title: true,
             participants: {
+              orderBy: {  
+                createdAt: "desc",
+              },
               where: {
-                id: {
-                  not: user.id,
+                NOT: {
+                  id: user.id,
                 },
               },
               select: {
@@ -258,6 +262,48 @@ export const fetchUserMeetingInvitations = async (
       status: "success",
       data: {
         invitations,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+export const fetchUserMeetings = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        participants: {
+          some: {
+            id: user.id,
+          },
+        },
+      },
+      include: {
+        participants: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          where: {
+            NOT: {
+              id: user.id,
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    res.status(200).json({
+      status: "success",
+      length: meetings.length,
+      data: {
+        meetings,
       },
     });
   } catch (error: any) {
