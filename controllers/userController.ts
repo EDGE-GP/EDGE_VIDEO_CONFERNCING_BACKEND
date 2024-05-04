@@ -1,6 +1,6 @@
 import AppError from "../utils/AppError";
 import prisma from "../prisma";
-import { User } from "@prisma/client";
+import { User, Friendship } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import jwt, { decode } from "jsonwebtoken";
 
@@ -156,6 +156,14 @@ export const createFriendshipRequest = async (
   try {
     const { userId } = req.body;
     const { user } = req;
+    if (userId === user.id) {
+      return next(
+        new AppError(
+          "Friendships can't be send to the same user making the request",
+          400
+        )
+      );
+    }
 
     const existingFriendship = await prisma.friendship.findFirst({
       where: {
@@ -240,13 +248,13 @@ export const handleFrienshipRequest = async (
   }
 };
 
-export const deleteFriendRequest = async (
+export const deleteFriendship = async (
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
   try {
-    const { friendshipId } = req.body;
+    const { friendshipId } = req.params;
     const { user } = req;
 
     const friendship = await prisma.friendship.findUnique({
@@ -258,36 +266,21 @@ export const deleteFriendRequest = async (
     if (!friendship) {
       return next(new AppError("No friendship found with this id", 404));
     }
-    if (friendship.status === "pending") {
-      return next(
-        new AppError(
-          "Can't preform this operation, Friendship request is still pending",
-          400
-        )
-      );
-    }
 
-    const updatedFriendship = await prisma.friendship.update({
+    await prisma.friendship.delete({
       where: {
         id: friendshipId,
       },
-      data: {
-        status: "deleted",
-        user1Id:
-          friendship.user1Id === user.id
-            ? friendship.user1Id
-            : friendship.user2Id,
-        user2Id:
-          friendship.user1Id === user.id
-            ? friendship.user2Id
-            : friendship.user1Id,
-      },
     });
-    res.status(200).json({
+
+    res.status(204).json({
       status: "Success",
-      data: {
-        updatedFriendship,
-      },
+      data: null,
+    });
+
+    res.status(204).json({
+      status: "Success",
+      data: null,
     });
   } catch (error: any) {
     next(new AppError(error.message, 500));
@@ -341,5 +334,367 @@ export const blockUser = async (
     });
   } catch (error: any) {
     next(new AppError(error.message, 500));
+  }
+};
+
+export const getUserFriendships = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const searchTerm = req.query.searchTerm as string;
+    const friendships = await prisma.friendship.findMany({
+      where: {
+        OR: [
+          {
+            AND: [
+              { status: "pending" },
+              {
+                user1Id: user.id,
+                user2: {
+                  OR: [
+                    {
+                      name: { contains: searchTerm || "", mode: "insensitive" },
+                    },
+                    {
+                      email: {
+                        contains: searchTerm || "",
+                        mode: "insensitive",
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+          {
+            OR: [
+              {
+                AND: [
+                  {
+                    status: "accepted",
+                  },
+                  {
+                    user1Id: { equals: user.id },
+                  },
+                  {
+                    user2: {
+                      OR: [
+                        {
+                          name: {
+                            contains: searchTerm || "",
+                            mode: "insensitive",
+                          },
+                        },
+                        {
+                          email: {
+                            contains: searchTerm || "",
+                            mode: "insensitive",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+              {
+                AND: [
+                  {
+                    status: "accepted",
+                  },
+                  {
+                    user2Id: { equals: user.id },
+                  },
+                  {
+                    user1: {
+                      OR: [
+                        {
+                          name: {
+                            contains: searchTerm || "",
+                            mode: "insensitive",
+                          },
+                        },
+                        {
+                          email: {
+                            contains: searchTerm || "",
+                            mode: "insensitive",
+                          },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      select: {
+        id: true,
+        status: true,
+        user1Id: true,
+        user2Id: true,
+        user1: {
+          select: {
+            name: true,
+            id: true,
+            email: true,
+            photo: true,
+          },
+        },
+        user2: {
+          select: {
+            name: true,
+            id: true,
+            email: true,
+            photo: true,
+          },
+        },
+      },
+    });
+
+    res.status(200).json({
+      status: "Success",
+      length: friendships.length,
+      data: {
+        friendships: friendships.map((friendship) => {
+          if (friendship.user1Id === user.id) {
+            return {
+              id: friendship.id,
+              status: friendship.status,
+              user: friendship.user2,
+            };
+          } else {
+            return {
+              id: friendship.id,
+              status: friendship.status,
+              user: friendship.user1,
+            };
+          }
+        }),
+      },
+    });
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
+  }
+};
+
+// export const searchUsersFriendships = async (
+//   req: Request,
+//   res: Response,
+//   next: NextFunction
+// ) => {
+//   try {
+//     const { user } = req;
+//     const { searchTerm } = req.params;
+//     const friendships = await prisma.friendship.findMany({
+//       where: {
+//         OR: [
+//           {
+//             AND: [
+//               { status: "pending" },
+//               {
+//                 user1Id: user.id,
+//                 user2: {
+//                   OR: [
+//                     { name: { contains: searchTerm, mode: "insensitive" } },
+//                     { email: { contains: searchTerm, mode: "insensitive" } },
+//                   ],
+//                 },
+//               },
+//             ],
+//           },
+//           {
+//             AND: [
+//               {
+//                 status: "accepted",
+//               },
+//               {
+//                 OR: [
+//                   {
+//                     user1Id: { equals: user.id },
+//                   },
+//                   {
+//                     user2Id: { equals: user.id },
+//                   },
+//                 ],
+//               },
+//               {
+//                 OR: [
+//                   {
+//                     user1: {
+//                       OR: [
+//                         {
+//                           name: { contains: searchTerm, mode: "insensitive" },
+//                         },
+//                         {
+//                           email: { contains: searchTerm, mode: "insensitive" },
+//                         },
+//                       ],
+//                     },
+//                   },
+//                   {
+//                     user2: {
+//                       OR: [
+//                         { name: { contains: searchTerm, mode: "insensitive" } },
+//                         {
+//                           email: { contains: searchTerm, mode: "insensitive" },
+//                         },
+//                       ],
+//                     },
+//                   },
+//                 ],
+//               },
+//             ],
+//           },
+//         ],
+//       },
+//       select: {
+//         id: true,
+//         status: true,
+//         user1Id: true,
+//         user2Id: true,
+//         user1: {
+//           select: {
+//             name: true,
+//             id: true,
+//             email: true,
+//             photo: true,
+//           },
+//         },
+//         user2: {
+//           select: {
+//             name: true,
+//             id: true,
+//             email: true,
+//             photo: true,
+//           },
+//         },
+//       },
+//     });
+//     res.status(200).json({
+//       status: "Success",
+//       length: friendships.length,
+//       data: {
+//         friendships: friendships.map((friendship) => {
+//           if (friendship.user1Id === user.id) {
+//             return {
+//               id: friendship.id,
+//               status: friendship.status,
+//               user: friendship.user2,
+//             };
+//           } else {
+//             return {
+//               id: friendship.id,
+//               status: friendship.status,
+//               user: friendship.user1,
+//             };
+//           }
+//         }),
+//       },
+//     });
+//   } catch (err: any) {
+//     next(new AppError(err.message, 500));
+//   }
+// };
+
+export const addFriendshipsSearch = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { searchTerm } = req.params;
+    const users = await prisma.user.findMany({
+      where: {
+        AND: [
+          {
+            OR: [
+              { email: { contains: searchTerm, mode: "insensitive" } },
+              { name: { contains: searchTerm, mode: "insensitive" } },
+            ],
+          },
+          {
+            NOT: [
+              {
+                friendsOf: {
+                  some: {
+                    OR: [
+                      {
+                        OR: [
+                          {
+                            user1: {
+                              email: {
+                                contains: searchTerm,
+                                mode: "insensitive",
+                              },
+                            },
+                          },
+                          {
+                            user1: {
+                              name: {
+                                contains: searchTerm,
+                                mode: "insensitive",
+                              },
+                            },
+                          },
+                        ],
+                      },
+                      {
+                        OR: [
+                          {
+                            user2: {
+                              email: {
+                                contains: searchTerm,
+                                mode: "insensitive",
+                              },
+                            },
+                          },
+                          {
+                            user2: {
+                              name: {
+                                contains: searchTerm,
+                                mode: "insensitive",
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          },
+          {
+            NOT: {
+              blockedBy: {
+                some: {
+                  id: user.id,
+                },
+              },
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        photo: true,
+      },
+    });
+
+    res.status(200).json({
+      status: "Success",
+      data: {
+        users,
+      },
+    });
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
   }
 };
