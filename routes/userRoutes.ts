@@ -15,7 +15,6 @@ import {
   handleFrienshipRequest,
   blockUser,
   getUserFriendships,
-  searchUsersFriendships,
   addFriendshipsSearch,
   deleteFriendship,
 } from "../controllers/userController";
@@ -60,10 +59,7 @@ router.put(
   validateData(handleFrienshipRequestSchema),
   handleFrienshipRequest
 );
-router.delete(
-  "/friendship/:friendshipId",
-  deleteFriendship
-);
+router.delete("/friendship/:friendshipId", deleteFriendship);
 router.post("/friendship/block", validateData(blockUserSchema), blockUser);
 router.get("/friendships/", getUserFriendships);
 router.get("/friendships/add/search/:searchTerm", addFriendshipsSearch);
