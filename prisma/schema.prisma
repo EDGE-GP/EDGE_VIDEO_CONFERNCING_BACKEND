@@ -83,7 +83,6 @@ model Invitation {
   id        String           @id @default(uuid())
   userId    String
   meetingId String
-  //status which is an enum of 'pending', 'accepted', 'rejected'
   status    InvitationStatus @default(pending)
   meeting   Meeting          @relation(fields: [meetingId], references: [id])
   user      User             @relation(fields: [userId], references: [id])

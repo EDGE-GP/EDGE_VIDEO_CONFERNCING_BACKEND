@@ -31,15 +31,13 @@ export const resetPasswordSchema = z
 export const createFriendshipRequestSchema = z.object({
   userId: z.string().uuid(),
 });
-export const acceptFriendshipRequestSchema = z.object({
-  friendshipId: z.string().uuid(),
-});
+
 export const handleFrienshipRequestSchema = z.object({
-  frienshipId: z.string().uuid(),
-  status: z.string(),
+  friendshipId: z.string().uuid(),
+  status: z.enum(["accepted", "rejected"]),
 });
 
-export const dedleteFriendshipRequestSchema = z.object({
+export const deleteFriendshipSchema = z.object({
   friendshipId: z.string().uuid(),
 });
 
