@@ -17,6 +17,7 @@ import {
   getUserFriendships,
   addFriendshipsSearch,
   deleteFriendship,
+  getFriendshipRequests,
 } from "../controllers/userController";
 import { validateData } from "../middleware/validation";
 import {
@@ -48,20 +49,22 @@ router.get("/validate", validate);
 router.get("/logout", logout);
 
 router.use(protect);
+router.get("/friendships/", getUserFriendships);
 router.get("/search/:searchTerm", searchUsers);
+router.delete("/friendships/:friendshipId", deleteFriendship);
+router.post("/friendships/block", validateData(blockUserSchema), blockUser);
+
 router.post(
-  "/friendship/request",
+  "/friendships/requests",
   validateData(createFriendshipRequestSchema),
   createFriendshipRequest
 );
+router.get("/friendships/requests", getFriendshipRequests);
 router.put(
-  "/friendship/handle-requests",
+  "/friendships/handle-requests",
   validateData(handleFrienshipRequestSchema),
   handleFrienshipRequest
 );
-router.delete("/friendship/:friendshipId", deleteFriendship);
-router.post("/friendship/block", validateData(blockUserSchema), blockUser);
-router.get("/friendships/", getUserFriendships);
 router.get("/friendships/add/search/:searchTerm", addFriendshipsSearch);
 
 export default router;

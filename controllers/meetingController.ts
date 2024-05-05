@@ -228,7 +228,7 @@ export const fetchUserMeetingInvitations = async (
             startTime: true,
             title: true,
             participants: {
-              orderBy: {  
+              orderBy: {
                 createdAt: "desc",
               },
               where: {
@@ -299,6 +299,14 @@ export const fetchUserMeetings = async (
         createdAt: "desc",
       },
     });
+    if (!meetings) {
+      return next(
+        new AppError(
+          "No scheduled or previous meetings found for that user with the provided id",
+          404
+        )
+      );
+    }
     res.status(200).json({
       status: "success",
       length: meetings.length,
