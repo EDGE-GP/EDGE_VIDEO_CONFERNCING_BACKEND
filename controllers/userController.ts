@@ -228,20 +228,32 @@ export const handleFrienshipRequest = async (
         )
       );
     }
-    const updateFriendship = await prisma.friendship.update({
-      where: {
-        id: friendshipId,
-      },
-      data: {
-        status,
-      },
-    });
-    res.status(200).json({
-      status: "Success",
-      data: {
-        updateFriendship,
-      },
-    });
+    if (status === "rejected") {
+      await prisma.friendship.delete({
+        where: {
+          id: friendshipId,
+        },
+      });
+      res.status(204).json({
+        status: "Success",
+        data: null,
+      });
+    } else {
+      const updateFriendship = await prisma.friendship.update({
+        where: {
+          id: friendshipId,
+        },
+        data: {
+          status,
+        },
+      });
+      res.status(200).json({
+        status: "Success",
+        data: {
+          updateFriendship,
+        },
+      });
+    }
   } catch (error: any) {
     console.log(error);
     next(new AppError(error.message, 500));
@@ -353,6 +365,7 @@ export const getUserFriendships = async (
               { status: "pending" },
               {
                 user1Id: user.id,
+
                 user2: {
                   OR: [
                     {
@@ -431,6 +444,7 @@ export const getUserFriendships = async (
           },
         ],
       },
+      orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       select: {
         id: true,
         status: true,
@@ -473,6 +487,68 @@ export const getUserFriendships = async (
               user: friendship.user1,
             };
           }
+        }),
+      },
+    });
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
+  }
+};
+
+export const getFriendshipRequests = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const searchTerm = req.query.searchTerm as string;
+    const friendshipRequests = await prisma.friendship.findMany({
+      where: {
+        AND: [
+          {
+            user2Id: user.id,
+          },
+          {
+            status: "pending",
+          },
+          {
+            user1: {
+              OR: [
+                {
+                  name: { contains: searchTerm || "", mode: "insensitive" },
+                },
+                {
+                  email: { contains: searchTerm || "", mode: "insensitive" },
+                },
+              ],
+            },
+          },
+        ],
+      },
+      select: {
+        user1: {
+          select: {
+            name: true,
+            email: true,
+            id: true,
+            photo: true,
+          },
+        },
+        id: true,
+        status: true,
+      },
+    });
+    res.status(200).json({
+      status: "success",
+      data: {
+        length: friendshipRequests.length,
+        friendshipRequests: friendshipRequests.map((friendshipRequest) => {
+          return {
+            id: friendshipRequest.id,
+            status: friendshipRequest.status,
+            user: friendshipRequest.user1,
+          };
         }),
       },
     });
@@ -618,64 +694,14 @@ export const addFriendshipsSearch = async (
             ],
           },
           {
-            NOT: [
-              {
-                friendsOf: {
-                  some: {
-                    OR: [
-                      {
-                        OR: [
-                          {
-                            user1: {
-                              email: {
-                                contains: searchTerm,
-                                mode: "insensitive",
-                              },
-                            },
-                          },
-                          {
-                            user1: {
-                              name: {
-                                contains: searchTerm,
-                                mode: "insensitive",
-                              },
-                            },
-                          },
-                        ],
-                      },
-                      {
-                        OR: [
-                          {
-                            user2: {
-                              email: {
-                                contains: searchTerm,
-                                mode: "insensitive",
-                              },
-                            },
-                          },
-                          {
-                            user2: {
-                              name: {
-                                contains: searchTerm,
-                                mode: "insensitive",
-                              },
-                            },
-                          },
-                        ],
-                      },
-                    ],
-                  },
-                },
-              },
-            ],
-          },
-          {
             NOT: {
-              blockedBy: {
-                some: {
-                  id: user.id,
-                },
-              },
+              OR: [
+                { blockedBy: { some: { id: user.id } } },
+                { blockedUsers: { some: { id: user.id } } },
+                { friendsOf: { some: { user2Id: user.id } } },
+                { friendsTo: { some: { user1Id: user.id } } },
+                { id: user.id },
+              ],
             },
           },
         ],

@@ -26,8 +26,6 @@ enum MeetingLanguage {
 enum FriendshipStatus {
   pending
   accepted
-  rejected
-  deleted
 }
 
 model User {
