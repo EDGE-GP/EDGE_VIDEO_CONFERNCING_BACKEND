@@ -28,24 +28,35 @@ enum FriendshipStatus {
   accepted
 }
 
+enum NotificationType {
+  meetingInvitation
+  meetingReminder
+  meetingUpdated
+  meetingCanceled
+  friendshipRequest
+  friendshipAccepted
+  friendshipRejected
+}
+
 model User {
-  id                   String       @id @default(uuid())
-  email                String       @unique
+  id                   String         @id @default(uuid())
+  email                String         @unique
   name                 String
   password             String
-  passwordChangedAt    DateTime     @default(now())
-  passwordResetToken   String?      @unique
+  passwordChangedAt    DateTime       @default(now())
+  passwordResetToken   String?        @unique
   passwordResetExpires DateTime?
   photo                String?
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
-  meetings             Meeting[]    @relation("MeetingParticipants")
-  adminMeetings        Meeting[]    @relation("AdminMeeting")
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  meetings             Meeting[]      @relation("MeetingParticipants")
+  adminMeetings        Meeting[]      @relation("AdminMeeting")
   Invitation           Invitation[]
-  friendsOf            Friendship[] @relation("FriendshipsOf")
-  friendsTo            Friendship[] @relation("FriendshipsTo")
-  blockedUsers         User[]       @relation("BlockedUsers")
-  blockedBy            User[]       @relation("BlockedUsers")
+  friendsOf            Friendship[]   @relation("FriendshipsOf")
+  friendsTo            Friendship[]   @relation("FriendshipsTo")
+  blockedUsers         User[]         @relation("BlockedUsers")
+  blockedBy            User[]         @relation("BlockedUsers")
+  Notifications        Notification[]
 }
 
 model Friendship {
@@ -86,4 +97,15 @@ model Invitation {
   user      User             @relation(fields: [userId], references: [id])
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  type      NotificationType
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [id])
 }

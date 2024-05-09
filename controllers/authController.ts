@@ -158,6 +158,7 @@ export const signup = async (
         password: hashedPassword,
       },
     });
+    //TODO: dont sign token and wait on email validation
     createSendToken(newUser, 201, res);
   } catch (err: any) {
     next(new AppError(err.message, 400));

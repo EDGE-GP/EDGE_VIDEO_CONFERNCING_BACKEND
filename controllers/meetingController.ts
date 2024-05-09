@@ -77,7 +77,6 @@ export const scheduleMeeting = async (
       );
     }
 
-    // TODO: Invitation should be created and sent to participants' email
     const invitationsPromises = participants.map((participant: string) =>
       prisma.invitation.create({
         data: {
@@ -97,13 +96,26 @@ export const scheduleMeeting = async (
         },
       })
     );
-
+    const notificationPromises = participants.map((participant: string) =>
+      prisma.notification.create({
+        data: {
+          userId: participant,
+          message: `You have been invited to ${meeting.title} meeting by ${user.name}`,
+          type: "meetingInvitation",
+        },
+      })
+    );
     const invitations = await Promise.all(invitationsPromises);
+    const notifications = await Promise.all(notificationPromises);
+
+    //TODO: send mails to participants and fire the notification event on sockets io
+
     res.status(201).json({
       status: "success",
       data: {
         meeting,
         invitations,
+        notifications,
       },
     });
   } catch (error: any) {

@@ -18,6 +18,7 @@ import {
   addFriendshipsSearch,
   deleteFriendship,
   getFriendshipRequests,
+  getUserNotifications,
 } from "../controllers/userController";
 import { validateData } from "../middleware/validation";
 import {
@@ -66,5 +67,7 @@ router.put(
   handleFrienshipRequest
 );
 router.get("/friendships/add/search/:searchTerm", addFriendshipsSearch);
+
+router.get("/notifications", getUserNotifications);
 
 export default router;
