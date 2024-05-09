@@ -21,6 +21,12 @@ const errorHandler = (
     err.message = "Your token has expired. Please log in again";
     err.statusCode = 401;
   }
+  if (err.statusCode === 500 && process.env.NODE_ENV === "production") {
+    console.log(err);
+    err.message = "Something went wrong. Please try again later";
+    err.statusCode = 500;
+  }
+
   res.status(err.statusCode).json({
     status: err.status,
     message: err.message,

@@ -1,8 +1,7 @@
 import AppError from "../utils/AppError";
 import prisma from "../prisma";
-import { User, Friendship } from "@prisma/client";
+import { User } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
-import jwt, { decode } from "jsonwebtoken";
 
 export const getAllUsers = async (
   req: Request,
@@ -718,6 +717,51 @@ export const addFriendshipsSearch = async (
       status: "Success",
       data: {
         users,
+      },
+    });
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
+  }
+};
+
+export const getUserNotifications = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const notifications = await prisma.notification.findMany({
+      where: {
+        userId: user.id,
+      },
+      orderBy: {
+        createdAt: "asc",
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        message: true,
+        read: true,
+        type: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photo: true,
+          },
+        },
+      },
+    });
+    res.status(200).json({
+      status: "Success",
+      data: {
+        notifications,
+        panner: notifications.reduce(
+          (acc, notification) => (notification.read === false ? acc + 1 : acc),
+          0
+        ),
       },
     });
   } catch (err: any) {
