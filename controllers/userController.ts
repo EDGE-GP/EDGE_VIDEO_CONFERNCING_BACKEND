@@ -263,6 +263,23 @@ export const handleFrienshipRequest = async (
           message: `${user.name} accepted your friend request`,
           type: "friendshipAccepted",
           userId: updateFriendship.user1Id,
+          badge: user.photo,
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          message: true,
+          read: true,
+          type: true,
+          badge: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              photo: true,
+            },
+          },
         },
       });
       sendNotificationToUser(updateFriendship.user1Id, notification, io);
@@ -756,7 +773,7 @@ export const getUserNotifications = async (
         userId: user.id,
       },
       orderBy: {
-        createdAt: "asc",
+        createdAt: "desc",
       },
       select: {
         id: true,
@@ -764,6 +781,7 @@ export const getUserNotifications = async (
         message: true,
         read: true,
         type: true,
+        badge: true,
         user: {
           select: {
             id: true,

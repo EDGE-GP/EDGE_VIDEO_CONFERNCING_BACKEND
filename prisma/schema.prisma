@@ -108,6 +108,7 @@ model Notification {
   read      Boolean          @default(false)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+  badge     String?
   user      User             @relation(fields: [userId], references: [id])
 }
 

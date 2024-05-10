@@ -103,6 +103,7 @@ export const scheduleMeeting = async (
           userId: participant,
           message: `You have been invited to ${meeting.title} meeting by ${user.name}`,
           type: "meetingInvitation",
+          badge: user.photo,
         },
         select: {
           id: true,
@@ -110,6 +111,7 @@ export const scheduleMeeting = async (
           message: true,
           read: true,
           type: true,
+          badge: true,
           user: {
             select: {
               id: true,
@@ -244,6 +246,23 @@ export const handleMeetingInvitation = async (
             ? "meetingInvitationAccepted"
             : "meetingInvitationRejected",
         userId: updatedInvitation.meeting.organizer.id,
+        badge: user.photo,
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        message: true,
+        read: true,
+        type: true,
+        badge: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photo: true,
+          },
+        },
       },
     });
     sendNotificationToUser(
