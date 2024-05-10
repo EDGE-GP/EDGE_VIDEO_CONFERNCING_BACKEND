@@ -2,6 +2,8 @@ import AppError from "../utils/AppError";
 import prisma from "../prisma";
 import { User } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
+import { sendNotificationToUser } from "../utils/NotificationService";
+import { io } from "../server";
 
 export const getAllUsers = async (
   req: Request,
@@ -183,7 +185,15 @@ export const createFriendshipRequest = async (
         user2Id: userId,
       },
     });
-
+    const notification = await prisma.notification.create({
+      data: {
+        message: `${user.name} sent you a friend request`,
+        type: "friendshipRequest",
+        userId,
+      },
+    });
+    //TODO: test on frontend
+    sendNotificationToUser(userId, notification, io);
     res.status(201).json({
       status: "success",
       friendship,
@@ -233,11 +243,13 @@ export const handleFrienshipRequest = async (
           id: friendshipId,
         },
       });
+
       res.status(204).json({
         status: "Success",
         data: null,
       });
     } else {
+      //TODO: test on frontend
       const updateFriendship = await prisma.friendship.update({
         where: {
           id: friendshipId,
@@ -246,6 +258,14 @@ export const handleFrienshipRequest = async (
           status,
         },
       });
+      const notification = await prisma.notification.create({
+        data: {
+          message: `${user.name} accepted your friend request`,
+          type: "friendshipAccepted",
+          userId: updateFriendship.user1Id,
+        },
+      });
+      sendNotificationToUser(updateFriendship.user1Id, notification, io);
       res.status(200).json({
         status: "Success",
         data: {
