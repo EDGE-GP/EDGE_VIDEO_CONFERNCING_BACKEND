@@ -5,7 +5,8 @@ import { Request, Response, NextFunction } from "express";
 import jwt, { decode } from "jsonwebtoken";
 import { addHours, parseISO } from "date-fns";
 import { Invitation } from "@prisma/client";
-
+import { io } from "../server";
+import { sendNotificationToUser } from "../utils/NotificationService";
 const generateRandomString = async (): Promise<string> => {
   const getRandomUpperCaseLetter = () =>
     String.fromCharCode(Math.floor(Math.random() * 26) + 65); // Random uppercase letter generator
@@ -103,10 +104,29 @@ export const scheduleMeeting = async (
           message: `You have been invited to ${meeting.title} meeting by ${user.name}`,
           type: "meetingInvitation",
         },
+        select: {
+          id: true,
+          createdAt: true,
+          message: true,
+          read: true,
+          type: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              photo: true,
+            },
+          },
+        },
       })
     );
+
     const invitations = await Promise.all(invitationsPromises);
     const notifications = await Promise.all(notificationPromises);
+    notifications.forEach((notification) => {
+      sendNotificationToUser(notification.user.id, notification, io);
+    });
 
     //TODO: send mails to participants and fire the notification event on sockets io
 
@@ -202,9 +222,35 @@ export const handleMeetingInvitation = async (
         status,
       },
       include: {
-        meeting: true,
+        meeting: {
+          select: {
+            id: true,
+            title: true,
+            organizer: {
+              select: {
+                id: true,
+              },
+            },
+          },
+        },
       },
     });
+    //TODO: test on frontend
+    const notification = await prisma.notification.create({
+      data: {
+        message: `${user.name} ${status} your ${updatedInvitation.meeting.title} meeting invitation`,
+        type:
+          status === "accepted"
+            ? "meetingInvitationAccepted"
+            : "meetingInvitationRejected",
+        userId: updatedInvitation.meeting.organizer.id,
+      },
+    });
+    sendNotificationToUser(
+      updatedInvitation.meeting.organizer.id,
+      notification,
+      io
+    );
     res.status(200).json({
       status: "success",
       data: {
@@ -330,3 +376,6 @@ export const fetchUserMeetings = async (
     next(new AppError(error.message, 500));
   }
 };
+
+//TODO: edit meeting
+//TODO: manage conversations with meetings
