@@ -18,6 +18,11 @@ enum InvitationStatus {
   rejected
 }
 
+enum PrivacyStatus {
+  public
+  private
+}
+
 enum MeetingLanguage {
   English
   Arabic
@@ -85,6 +90,8 @@ model Meeting {
   participants      User[]          @relation("MeetingParticipants")
   organizer         User            @relation("AdminMeeting", fields: [organizerId], references: [id])
   organizerId       String
+  token             String?
+  privacyStatus     PrivacyStatus   @default(public)
   Invitation        Invitation[]
   language          MeetingLanguage @default(English)
 }

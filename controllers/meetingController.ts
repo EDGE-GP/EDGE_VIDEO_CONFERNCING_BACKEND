@@ -2,11 +2,9 @@ import AppError from "../utils/AppError";
 import prisma from "../prisma";
 import { Meeting } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
-import jwt, { decode } from "jsonwebtoken";
-import { addHours, parseISO } from "date-fns";
-import { Invitation } from "@prisma/client";
 import { io } from "../server";
 import { sendNotificationToUser } from "../utils/NotificationService";
+import { RtcRole, RtcTokenBuilder } from "agora-access-token";
 const generateRandomString = async (): Promise<string> => {
   const getRandomUpperCaseLetter = () =>
     String.fromCharCode(Math.floor(Math.random() * 26) + 65); // Random uppercase letter generator
@@ -51,6 +49,7 @@ export const scheduleMeeting = async (
       saveConversation,
       participants,
       language,
+      privacyStatus,
     } = req.body;
 
     const meeting = await prisma.meeting.create({
@@ -63,6 +62,7 @@ export const scheduleMeeting = async (
         enableInterpreter,
         saveConversation,
         language,
+        privacyStatus,
         conferenceId: await generateRandomString(),
         organizerId: user.id,
         participants: {
@@ -130,7 +130,7 @@ export const scheduleMeeting = async (
       sendNotificationToUser(notification.user.id, notification, io);
     });
 
-    //TODO: send mails to participants and fire the notification event on sockets io
+    //TODO: send mails to participants
 
     res.status(201).json({
       status: "success",
@@ -389,6 +389,193 @@ export const fetchUserMeetings = async (
       length: meetings.length,
       data: {
         meetings,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+
+export const joinMeeting = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { conferenceId } = req.body;
+    let meeting: Meeting | null = await prisma.meeting.findUnique({
+      where: {
+        conferenceId,
+        OR: [
+          { participants: { some: { id: user.id } } },
+          {
+            Invitation: {
+              some: { userId: user.id, meeting: { conferenceId } },
+            },
+          },
+        ],
+      },
+      include: {
+        participants: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            photo: true,
+          },
+        },
+      },
+    });
+    if (!meeting) {
+      return next(new AppError("No meeting found with the provided id", 404));
+    }
+    if (meeting.token) {
+      return res.status(200).json({
+        status: "success",
+        data: {
+          meeting,
+        },
+      });
+    }
+    const token = RtcTokenBuilder.buildTokenWithUid(
+      process.env.AGORA_APP_ID,
+      process.env.AGORA_APP_CERTIFICATE,
+      conferenceId,
+      0,
+      RtcRole.PUBLISHER,
+      Math.floor(Date.now() / 1000) + parseInt(process.env.AGORA_EXPIRES_IN)
+    );
+
+    meeting = await prisma.meeting.update({
+      where: {
+        id: meeting.id,
+      },
+      data: {
+        token,
+      },
+    });
+    res.status(200).json({
+      status: "success",
+      data: {
+        meeting,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+
+export const createInstantMeeting = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const {
+      title,
+      description,
+      participants,
+      language,
+      activityFlag,
+      enableAvatar,
+      enableInterpreter,
+      saveConversation,
+      privacyStatus,
+    } = req.body;
+    const { user } = req;
+    const conferenceId = await generateRandomString();
+    const meeting = await prisma.meeting.create({
+      data: {
+        title,
+        description,
+        activityFlag,
+        enableAvatar,
+        enableInterpreter,
+        saveConversation,
+        language,
+        conferenceId,
+        privacyStatus,
+        token: RtcTokenBuilder.buildTokenWithUid(
+          process.env.AGORA_APP_ID,
+          process.env.AGORA_APP_CERTIFICATE,
+          conferenceId,
+          0,
+          RtcRole.PUBLISHER,
+          Math.floor(Date.now() / 1000) + parseInt(process.env.AGORA_EXPIRES_IN)
+        ),
+        organizerId: user.id,
+        participants: {
+          connect: participants.map((participant: string) => ({
+            id: participant,
+          })),
+        },
+      },
+    });
+    if (!meeting) {
+      return next(
+        new AppError("Please verify all fields and meeting settings", 400)
+      );
+    }
+    const invitationsPromises = participants.map((participant: string) =>
+      prisma.invitation.create({
+        data: {
+          meetingId: meeting.id,
+          userId: participant,
+          status: "pending",
+        },
+        select: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              photo: true,
+            },
+          },
+        },
+      })
+    );
+    const notificationPromises = participants.map((participant: string) =>
+      prisma.notification.create({
+        data: {
+          userId: participant,
+          message: `You have been invited to ${meeting.title} meeting by ${user.name}`,
+          type: "meetingInvitation",
+          badge: user.photo,
+        },
+        select: {
+          id: true,
+          createdAt: true,
+          message: true,
+          read: true,
+          type: true,
+          badge: true,
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              photo: true,
+            },
+          },
+        },
+      })
+    );
+    const invitations = await Promise.all(invitationsPromises);
+    const notifications = await Promise.all(notificationPromises);
+    notifications.forEach((notification) => {
+      sendNotificationToUser(notification.user.id, notification, io);
+    });
+
+    //TODO: send mails to participants
+
+    res.status(201).json({
+      status: "success",
+      data: {
+        meeting,
+        invitations,
+        notifications,
       },
     });
   } catch (error: any) {

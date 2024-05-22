@@ -320,12 +320,6 @@ export const deleteFriendship = async (
         id: friendshipId,
       },
     });
-
-    res.status(204).json({
-      status: "Success",
-      data: null,
-    });
-
     res.status(204).json({
       status: "Success",
       data: null,

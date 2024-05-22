@@ -7,10 +7,14 @@ import {
   handleMeetingInvitation,
   fetchUserMeetingInvitations,
   fetchUserMeetings,
+  joinMeeting,
+  createInstantMeeting,
 } from "../controllers/meetingController";
 import { validateData } from "../middleware/validation";
 import {
+  createInstantMeetingSchema,
   handleMeetingInvitationsSchema,
+  joinMeetingSchema,
   scheduleMeetingSchema,
 } from "../schema/meetings";
 import { protect } from "../controllers/authController";
@@ -24,6 +28,8 @@ router.put(
   handleMeetingInvitation
 );
 router.get("/invitations", fetchUserMeetingInvitations);
+router.post("/join", validateData(joinMeetingSchema), joinMeeting);
+router.post("/instant", validateData(createInstantMeetingSchema), createInstantMeeting);
 router.get("/:id", getMeeting);
 
 export default router;

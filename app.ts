@@ -20,6 +20,10 @@ declare global {
       NODE_ENV: "development" | "production";
       JWT_SECRET: string;
       JWT_EXPIRES_IN: string;
+      JWT_COOKIE_EXPIRES_IN: string;
+      AGORA_APP_ID: string;
+      AGORA_APP_CERTIFICATE: string;
+      AGORA_EXPIRES_IN: string;
     }
   }
   namespace Express {

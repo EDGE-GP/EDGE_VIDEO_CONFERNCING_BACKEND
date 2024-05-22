@@ -4,7 +4,6 @@ import { z } from "zod";
 
 export const scheduleMeetingSchema = z.object({
   title: z.string().min(1, { message: "cannot be empty" }),
-  description: z.string(),
   startTime: z
     .string()
     .datetime()
@@ -18,9 +17,28 @@ export const scheduleMeetingSchema = z.object({
     ),
   activityFlag: z.string().length(7).startsWith("#"),
   participants: z.string().uuid().array(),
+  language: z.enum(["English", "Arabic"]),
+  enableAvatar: z.boolean(),
+  enableInterpreter: z.boolean(),
+  saveConversation: z.boolean(),
+  privacyStatus: z.enum(["public", "private"]),
+});
+export const createInstantMeetingSchema = z.object({
+  title: z.string().min(1, { message: "cannot be empty" }),
+  activityFlag: z.string().length(7).startsWith("#"),
+  participants: z.string().uuid().array(),
+  language: z.enum(["English", "Arabic"]),
+  enableAvatar: z.boolean(),
+  enableInterpreter: z.boolean(),
+  saveConversation: z.boolean(),
+  privacyStatus: z.enum(["public", "private"]),
 });
 
 export const handleMeetingInvitationsSchema = z.object({
   status: z.enum(["accepted", "rejected"]),
   invitationId: z.string().uuid(),
+});
+
+export const joinMeetingSchema = z.object({
+  conferenceId: z.string().length(14),
 });
