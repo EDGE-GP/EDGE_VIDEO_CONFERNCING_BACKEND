@@ -800,3 +800,29 @@ export const getUserNotifications = async (
     next(new AppError(err.message, 500));
   }
 };
+
+export const markNotificationsAsViewed = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    console.log({
+      user,
+    });
+    await prisma.notification.updateMany({
+      where: {
+        userId: user.id,
+      },
+      data: {
+        read: true,
+      },
+    });
+    res.status(200).json({
+      status: "Success  ",
+    });
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
+  }
+};

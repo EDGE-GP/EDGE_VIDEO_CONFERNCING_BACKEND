@@ -428,7 +428,9 @@ export const joinMeeting = async (
       },
     });
     if (!meeting) {
-      return next(new AppError("No meeting found with the provided id", 404));
+      return next(
+        new AppError("No meeting found for you with the provided id", 404)
+      );
     }
     if (meeting.token) {
       return res.status(200).json({

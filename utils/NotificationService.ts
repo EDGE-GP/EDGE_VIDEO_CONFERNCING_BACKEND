@@ -18,3 +18,4 @@ export function sendNotificationToUser(
     console.log(`User ${userId} is not connected`);
   }
 }
+  
