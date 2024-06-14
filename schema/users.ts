@@ -44,3 +44,21 @@ export const deleteFriendshipSchema = z.object({
 export const blockUserSchema = z.object({
   blockedUserId: z.string().uuid(),
 });
+
+export const updatePersonalInformationSchema = z.object({
+  name: z.string(),
+  bio: z.string(),
+  location: z.string(),
+  remindersViaEmail: z.boolean(),
+  notifyEmail: z.boolean(),
+  photo: z
+    .any()
+    .refine((file) => file?.size <= 5000000, `Max image size is 5MB.`)
+    .refine(
+      (file) =>
+        ["image/jpeg", "image/jpg", "image/png", "image/webp"].includes(
+          file?.type
+        ),
+      "Only .jpg, .jpeg, .png and .webp formats are supported."
+    ),
+});

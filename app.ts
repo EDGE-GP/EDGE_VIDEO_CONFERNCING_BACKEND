@@ -12,7 +12,7 @@ import cookieParser from "cookie-parser";
 import userRouter from "./routes/userRoutes";
 import meetingRouter from "./routes/meetingRoutes";
 import { User } from "@prisma/client";
-
+import path from "path";
 declare global {
   namespace NodeJS {
     interface ProcessEnv {
@@ -32,6 +32,13 @@ declare global {
     }
   }
 }
+declare module "@prisma/client" {
+  namespace Prisma {
+    interface args {
+      req?: Request;
+    }
+  }
+}
 
 dotenv.config();
 
@@ -46,17 +53,11 @@ app.use(
 );
 app.use(cookieParser());
 
-app.get("/", (req: Request, res: Response) => {
-  res.status(200).json({
-    status: "success",
-    message: "Hello World",
-  });
-});
-
 app.use((req: Request, res: Response, next: NextFunction) => {
   req.body.requestTime = new Date().toISOString();
   next();
 });
+app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/meetings", meetingRouter);

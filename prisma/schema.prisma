@@ -52,7 +52,7 @@ model User {
   passwordChangedAt    DateTime       @default(now())
   passwordResetToken   String?        @unique
   passwordResetExpires DateTime?
-  photo                String?
+  avatar               String?
   createdAt            DateTime       @default(now())
   updatedAt            DateTime       @updatedAt
   meetings             Meeting[]      @relation("MeetingParticipants")
@@ -63,6 +63,10 @@ model User {
   blockedUsers         User[]         @relation("BlockedUsers")
   blockedBy            User[]         @relation("BlockedUsers")
   Notifications        Notification[]
+  notifyEmail          Boolean        @default(true)
+  remindersViaEmail    Boolean        @default(true)
+  bio                  String?
+  location             String?
 }
 
 model Friendship {

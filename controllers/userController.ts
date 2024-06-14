@@ -1,9 +1,12 @@
 import AppError from "../utils/AppError";
 import prisma from "../prisma";
-import { User } from "@prisma/client";
+import { Prisma, User } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import { sendNotificationToUser } from "../utils/NotificationService";
 import { io } from "../server";
+import { parseAvatarURL } from "../utils/FileUpload";
+import fs from "fs";
+import path from "path";
 
 export const getAllUsers = async (
   req: Request,
@@ -11,7 +14,9 @@ export const getAllUsers = async (
   next: NextFunction
 ) => {
   try {
-    const users: User[] = await prisma.user.findMany();
+    const users: User[] = await prisma.user
+      .findMany()
+      .then((users) => users.map((user) => parseAvatarURL(req, user)));
 
     res.status(200).json({
       status: "success",
@@ -110,6 +115,9 @@ export const deleteUser = async (
   }
 };
 
+interface CustomArgs {
+  baseURL: string;
+}
 export const searchUsers = async (
   req: Request,
   res: Response,
@@ -133,7 +141,7 @@ export const searchUsers = async (
         id: true,
         name: true,
         email: true,
-        photo: true,
+        avatar: true,
       },
     });
 
@@ -263,7 +271,7 @@ export const handleFrienshipRequest = async (
           message: `${user.name} accepted your friend request`,
           type: "friendshipAccepted",
           userId: updateFriendship.user1Id,
-          badge: user.photo,
+          badge: user.avatar,
         },
         select: {
           id: true,
@@ -277,7 +285,7 @@ export const handleFrienshipRequest = async (
               id: true,
               name: true,
               email: true,
-              photo: true,
+              avatar: true,
             },
           },
         },
@@ -351,13 +359,13 @@ export const blockUser = async (
         id: true,
         name: true,
         email: true,
-        photo: true,
+        avatar: true,
         blockedUsers: {
           select: {
             id: true,
             name: true,
             email: true,
-            photo: true,
+            avatar: true,
           },
         },
         blockedBy: {
@@ -365,7 +373,7 @@ export const blockUser = async (
             id: true,
             name: true,
             email: true,
-            photo: true,
+            avatar: true,
           },
         },
       },
@@ -485,7 +493,7 @@ export const getUserFriendships = async (
             name: true,
             id: true,
             email: true,
-            photo: true,
+            avatar: true,
           },
         },
         user2: {
@@ -493,7 +501,7 @@ export const getUserFriendships = async (
             name: true,
             id: true,
             email: true,
-            photo: true,
+            avatar: true,
           },
         },
       },
@@ -562,7 +570,7 @@ export const getFriendshipRequests = async (
             name: true,
             email: true,
             id: true,
-            photo: true,
+            avatar: true,
           },
         },
         id: true,
@@ -740,7 +748,7 @@ export const addFriendshipsSearch = async (
         id: true,
         name: true,
         email: true,
-        photo: true,
+        avatar: true,
       },
     });
 
@@ -781,7 +789,7 @@ export const getUserNotifications = async (
             id: true,
             name: true,
             email: true,
-            photo: true,
+            avatar: true,
           },
         },
       },
@@ -821,6 +829,63 @@ export const markNotificationsAsViewed = async (
     });
     res.status(200).json({
       status: "Success  ",
+    });
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
+  }
+};
+
+export const updatePersonalInformation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { name, bio, location, remindersViaEmail, notifyEmail } = req.body;
+    let avatar;
+    const existingUser = await prisma.user.findFirst({
+      where: {
+        id: user.id,
+      },
+    });
+    if (req.file) {
+      avatar = req.file.filename;
+
+      if (existingUser?.avatar) {
+        const filePath = path.join(
+          process.cwd(),
+          `public/uploads/users/${existingUser.avatar}`
+        );
+        console.log({ filePath });
+        if (fs.existsSync(filePath)) {
+          // Delete the file
+          fs.unlinkSync(filePath);
+          console.log(`Old image ${avatar} deleted successfully.`);
+        } else {
+          console.log(`Old image ${avatar} does not exist.`);
+        }
+      }
+    }
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        name,
+        bio,
+        location,
+        remindersViaEmail,
+        notifyEmail,
+        avatar,
+      },
+    });
+    // .then((user) => parseAvatarURL(req, user));
+    res.status(200).json({
+      status: "success",
+      data: {
+        user: updatedUser,
+      },
     });
   } catch (err: any) {
     next(new AppError(err.message, 500));

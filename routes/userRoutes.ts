@@ -20,6 +20,7 @@ import {
   getFriendshipRequests,
   getUserNotifications,
   markNotificationsAsViewed,
+  updatePersonalInformation,
 } from "../controllers/userController";
 import { validateData } from "../middleware/validation";
 import {
@@ -32,6 +33,7 @@ import {
   resetPasswordSchema,
   signupSchema,
 } from "../schema/users";
+import { resizeUserPhoto, uploadUserPhoto } from "../utils/FileUpload";
 
 const router: Router = Router();
 
@@ -71,5 +73,11 @@ router.get("/friendships/add/search/:searchTerm", addFriendshipsSearch);
 
 router.get("/notifications", getUserNotifications);
 router.put("/view-notifications", markNotificationsAsViewed);
+router.put(
+  "/update",
+  uploadUserPhoto,
+  resizeUserPhoto,
+  updatePersonalInformation
+);
 
 export default router;
