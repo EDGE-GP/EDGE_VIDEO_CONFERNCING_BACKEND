@@ -49,8 +49,8 @@ export const updatePersonalInformationSchema = z.object({
   name: z.string(),
   bio: z.string(),
   location: z.string(),
-  remindersViaEmail: z.boolean(),
-  notifyEmail: z.boolean(),
+  remindersViaEmail: z.string(),
+  notifyEmail: z.string(),
   photo: z
     .any()
     .refine((file) => file?.size <= 5000000, `Max image size is 5MB.`)
@@ -62,3 +62,13 @@ export const updatePersonalInformationSchema = z.object({
       "Only .jpg, .jpeg, .png and .webp formats are supported."
     ),
 });
+
+export const updateUserPasswordSchema = z
+  .object({
+    currentPassword: z.string(),
+    newPassword: z.string(),
+    confirmNewPassword: z.string(),
+  })
+  .refine((data) => data.newPassword === data.confirmNewPassword, {
+    message: "Passwords don't match",
+  });

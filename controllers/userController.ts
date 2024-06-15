@@ -51,7 +51,7 @@ export const getOneUser = async (
       },
     });
   } catch (error: any) {
-    next(new AppError(error.message, 404));
+    next(new AppError(error.message, 500));
   }
 };
 export const updateUser = async (
@@ -74,7 +74,7 @@ export const updateUser = async (
     });
 
     if (!updatedUser) {
-      return next(new AppError("No user found with that ID", 404));
+      return next(new AppError("No user found with that ID", 500));
     }
 
     res.status(200).json({
@@ -84,7 +84,7 @@ export const updateUser = async (
       },
     });
   } catch (error: any) {
-    next(new AppError(error.message, 404));
+    next(new AppError(error.message, 500));
   }
 };
 export const deleteUser = async (
@@ -111,7 +111,7 @@ export const deleteUser = async (
       data: null,
     });
   } catch (error: any) {
-    next(new AppError(error.message, 404));
+    next(new AppError(error.message, 500));
   }
 };
 
@@ -142,6 +142,10 @@ export const searchUsers = async (
         name: true,
         email: true,
         avatar: true,
+        location: true,
+        bio: true,
+        notifyEmail: true,
+        remindersViaEmail: true,
       },
     });
 
@@ -153,7 +157,7 @@ export const searchUsers = async (
       },
     });
   } catch (error: any) {
-    next(new AppError(error.message, 404));
+    next(new AppError(error.message, 500));
   }
 };
 
@@ -366,6 +370,10 @@ export const blockUser = async (
             name: true,
             email: true,
             avatar: true,
+            bio: true,
+            location: true,
+            notifyEmail: true,
+            remindersViaEmail: true,
           },
         },
         blockedBy: {
@@ -374,6 +382,10 @@ export const blockUser = async (
             name: true,
             email: true,
             avatar: true,
+            bio: true,
+            location: true,
+            notifyEmail: true,
+            remindersViaEmail: true,
           },
         },
       },
@@ -494,6 +506,10 @@ export const getUserFriendships = async (
             id: true,
             email: true,
             avatar: true,
+            bio: true,
+            location: true,
+            remindersViaEmail: true,
+            notifyEmail: true,
           },
         },
         user2: {
@@ -502,6 +518,10 @@ export const getUserFriendships = async (
             id: true,
             email: true,
             avatar: true,
+            bio: true,
+            location: true,
+            remindersViaEmail: true,
+            notifyEmail: true,
           },
         },
       },
@@ -571,6 +591,10 @@ export const getFriendshipRequests = async (
             email: true,
             id: true,
             avatar: true,
+            location: true,
+            remindersViaEmail: true,
+            notifyEmail: true,
+            bio: true,
           },
         },
         id: true,
@@ -749,6 +773,10 @@ export const addFriendshipsSearch = async (
         name: true,
         email: true,
         avatar: true,
+        bio: true,
+        notifyEmail: true,
+        location: true,
+        remindersViaEmail: true,
       },
     });
 
@@ -790,6 +818,10 @@ export const getUserNotifications = async (
             name: true,
             email: true,
             avatar: true,
+            location: true,
+            bio: true,
+            notifyEmail: true,
+            remindersViaEmail: true,
           },
         },
       },
@@ -875,9 +907,19 @@ export const updatePersonalInformation = async (
         name,
         bio,
         location,
-        remindersViaEmail,
-        notifyEmail,
+        remindersViaEmail: remindersViaEmail === "true",
+        notifyEmail: notifyEmail === "true",
         avatar,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        avatar: true,
+        bio: true,
+        location: true,
+        notifyEmail: true,
+        remindersViaEmail: true,
       },
     });
     // .then((user) => parseAvatarURL(req, user));

@@ -33,7 +33,7 @@ const createSendToken = async (
         id: user.id,
         name: user.name,
         email: user.email,
-        photo: user.avatar,
+        avatar: user.avatar,
         remindersViaEmail: user.remindersViaEmail,
         location: user.location,
         bio: user.bio,
@@ -134,7 +134,7 @@ export const login = async (
     }
     createSendToken(user, 200, res);
   } catch (err: any) {
-    next(new AppError(err.message, 400));
+    next(new AppError(err.message, 500));
   }
 };
 
@@ -165,7 +165,7 @@ export const signup = async (
     //TODO: dont sign token and wait on email validation
     createSendToken(newUser, 201, res);
   } catch (err: any) {
-    next(new AppError(err.message, 400));
+    next(new AppError(err.message, 500));
   }
 };
 
@@ -209,7 +209,7 @@ export const forgotPassword = async (
       resetToken,
     });
   } catch (err: any) {
-    next(new AppError(err.message, 400));
+    next(new AppError(err.message, 500));
   }
 };
 
@@ -252,7 +252,7 @@ export const resetPassword = async (
       message: "Password reset successful",
     });
   } catch (err: any) {
-    next(new AppError(err.message, 400));
+    next(new AppError(err.message, 500));
   }
 };
 
@@ -320,7 +320,7 @@ export const validate = async (
           id: user.id,
           name: user.name,
           email: user.email,
-          photo: user.avatar,
+          avatar: user.avatar,
           remindersViaEmail: user.remindersViaEmail,
           location: user.location,
           bio: user.bio,
@@ -329,7 +329,7 @@ export const validate = async (
       },
     });
   } catch (err: any) {
-    next(new AppError(err.message, 400));
+    next(new AppError(err.message, 500));
   }
 };
 
@@ -347,6 +347,33 @@ export const logout = async (
       status: "success",
     });
   } catch (err: any) {
-    next(new AppError(err.message, 400));
+    next(new AppError(err.message, 500));
+  }
+};
+
+export const changeUserPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const { user } = req;
+    if (!(await bcrypt.compare(currentPassword, user.password))) {
+      return next(new AppError("Current password is incorrect", 401));
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    const updatedUser = await prisma.user.update({
+      where: {
+        id: user.id,
+      },
+      data: {
+        password: hashedPassword,
+        passwordChangedAt: new Date(),
+      },
+    });
+    createSendToken(updatedUser, 200, res);
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
   }
 };

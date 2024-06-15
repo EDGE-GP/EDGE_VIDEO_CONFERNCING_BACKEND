@@ -24,6 +24,7 @@ declare global {
       AGORA_APP_ID: string;
       AGORA_APP_CERTIFICATE: string;
       AGORA_EXPIRES_IN: string;
+      BASE_URL: string;
     }
   }
   namespace Express {

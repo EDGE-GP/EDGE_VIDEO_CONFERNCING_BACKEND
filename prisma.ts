@@ -23,7 +23,7 @@ prisma.$use(async (params, next) => {
 
     const processAvatar = (user: any) => {
       if (user.avatar) {
-        user.avatar = `http://localhost:8000/public/uploads/users/${user.avatar}`;
+        user.avatar = `${process.env.BASE_URL}/public/uploads/users/${user.avatar}`;
       }
     };
 

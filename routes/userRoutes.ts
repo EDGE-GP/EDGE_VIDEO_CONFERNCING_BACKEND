@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  changeUserPassword,
   forgotPassword,
   login,
   logout,
@@ -32,6 +33,8 @@ import {
   loginSchema,
   resetPasswordSchema,
   signupSchema,
+  updatePersonalInformationSchema,
+  updateUserPasswordSchema,
 } from "../schema/users";
 import { resizeUserPhoto, uploadUserPhoto } from "../utils/FileUpload";
 
@@ -75,9 +78,15 @@ router.get("/notifications", getUserNotifications);
 router.put("/view-notifications", markNotificationsAsViewed);
 router.put(
   "/update",
+  validateData(updatePersonalInformationSchema),
   uploadUserPhoto,
   resizeUserPhoto,
   updatePersonalInformation
+);
+router.put(
+  "/update-password",
+  validateData(updateUserPasswordSchema),
+  changeUserPassword
 );
 
 export default router;
