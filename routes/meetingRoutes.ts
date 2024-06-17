@@ -29,7 +29,11 @@ router.put(
 );
 router.get("/invitations", fetchUserMeetingInvitations);
 router.post("/join", validateData(joinMeetingSchema), joinMeeting);
-router.post("/instant", validateData(createInstantMeetingSchema), createInstantMeeting);
+router.post(
+  "/instant",
+  validateData(createInstantMeetingSchema),
+  createInstantMeeting
+);
 router.get("/:id", getMeeting);
 
 export default router;

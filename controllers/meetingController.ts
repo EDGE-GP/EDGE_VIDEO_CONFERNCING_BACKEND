@@ -427,36 +427,13 @@ export const joinMeeting = async (
         },
       },
     });
+    console.log({ conferenceId });
     if (!meeting) {
       return next(
-        new AppError("No meeting found for you with the provided id", 404)
+        new AppError("No meeting found with the provided conference id", 404)
       );
     }
-    if (meeting.token) {
-      return res.status(200).json({
-        status: "success",
-        data: {
-          meeting,
-        },
-      });
-    }
-    const token = RtcTokenBuilder.buildTokenWithUid(
-      process.env.AGORA_APP_ID,
-      process.env.AGORA_APP_CERTIFICATE,
-      conferenceId,
-      0,
-      RtcRole.PUBLISHER,
-      Math.floor(Date.now() / 1000) + parseInt(process.env.AGORA_EXPIRES_IN)
-    );
-
-    meeting = await prisma.meeting.update({
-      where: {
-        id: meeting.id,
-      },
-      data: {
-        token,
-      },
-    });
+    //TODO: manage active participants using sockets, if meeting current time is greater than start time plus 15 minutes, do not allow join
     res.status(200).json({
       status: "success",
       data: {
@@ -498,19 +475,14 @@ export const createInstantMeeting = async (
         language,
         conferenceId,
         privacyStatus,
-        token: RtcTokenBuilder.buildTokenWithUid(
-          process.env.AGORA_APP_ID,
-          process.env.AGORA_APP_CERTIFICATE,
-          conferenceId,
-          0,
-          RtcRole.PUBLISHER,
-          Math.floor(Date.now() / 1000) + parseInt(process.env.AGORA_EXPIRES_IN)
-        ),
         organizerId: user.id,
         participants: {
-          connect: participants.map((participant: string) => ({
-            id: participant,
-          })),
+          connect: [
+            { id: user.id },
+            ...participants.map((participant: string) => ({
+              id: participant,
+            })),
+          ],
         },
       },
     });
