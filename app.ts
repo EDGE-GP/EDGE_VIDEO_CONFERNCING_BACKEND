@@ -25,6 +25,11 @@ declare global {
       AGORA_APP_CERTIFICATE: string;
       AGORA_EXPIRES_IN: string;
       BASE_URL: string;
+      EMAIL_HOST: string;
+      EMAIL_PORT: string;
+      EMAIL_USERNAME: string;
+      EMAIL_PASSWORD: string;
+      FRONT_END_BASE_URL:string
     }
   }
   namespace Express {
@@ -33,17 +38,11 @@ declare global {
     }
   }
 }
-declare module "@prisma/client" {
-  namespace Prisma {
-    interface args {
-      req?: Request;
-    }
-  }
-}
 
 dotenv.config();
 
 const app: Application = express();
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(
@@ -58,6 +57,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   req.body.requestTime = new Date().toISOString();
   next();
 });
+app.set("view engine", "pug");
 app.use("/public", express.static(path.join(__dirname, "public")));
 
 app.use("/api/v1/users", userRouter);

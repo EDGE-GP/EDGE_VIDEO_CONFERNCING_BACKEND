@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import { User } from "@prisma/client";
 import jwt, { decode } from "jsonwebtoken";
 import crypto from "crypto";
+import Email from "../utils/email";
 
 const signToken = (id: string) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -162,6 +163,12 @@ export const signup = async (
         password: hashedPassword,
       },
     });
+
+    new Email(
+      newUser,
+      `${process.env.FRONT_END_BASE_URL}/dashboard/settings`
+    ).sendWelcome();
+
     //TODO: dont sign token and wait on email validation
     createSendToken(newUser, 201, res);
   } catch (err: any) {

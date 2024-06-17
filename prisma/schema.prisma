@@ -67,6 +67,7 @@ model User {
   remindersViaEmail    Boolean        @default(true)
   bio                  String?
   location             String?
+  active               Boolean        @default(false)
 }
 
 model Friendship {

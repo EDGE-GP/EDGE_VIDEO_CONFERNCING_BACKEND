@@ -1,0 +1,14 @@
+extends baseEmail
+
+block content
+  p Hi #{firstName},
+  p Please activate your account so you can enjoy all of Edge features by click on the following link: #{url}.
+  table.btn.btn-primary(role='presentation', border='0', cellpadding='0', cellspacing='0')
+    tbody
+      tr
+        td(align='left')
+          table(role='presentation', border='0', cellpadding='0', cellspacing='0')
+            tbody
+              tr
+                td
+                  a(href=`${url}`, target='_blank') Activiate your account
