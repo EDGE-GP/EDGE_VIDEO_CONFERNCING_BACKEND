@@ -1,3 +1,4 @@
+//TODO: only address verified users
 import { Request, Response, NextFunction } from "express";
 import AppError from "../utils/AppError";
 import prisma from "../prisma";
@@ -50,6 +51,7 @@ export const protect = async (
   next: NextFunction
 ) => {
   try {
+    console.log("hitting protect");
     let token;
     if (
       req.headers.authorization &&
@@ -133,6 +135,9 @@ export const login = async (
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return next(new AppError("Incorrect email or password", 401));
     }
+    if (!user.active) {
+      return next(new AppError("Please activate your account first", 400));
+    }
     createSendToken(user, 200, res);
   } catch (err: any) {
     next(new AppError(err.message, 500));
@@ -155,22 +160,62 @@ export const signup = async (
       return next(new AppError("User already exists", 400));
     }
     const hashedPassword = await bcrypt.hash(password, 12);
-
+    const activationToken = crypto.randomBytes(32).toString("hex");
+    const emailActivationToken = crypto
+      .createHash("sha256")
+      .update(activationToken)
+      .digest("hex");
     const newUser: User = await prisma.user.create({
       data: {
         name: name,
         email: email,
         password: hashedPassword,
+        emailActivationToken,
       },
     });
 
     new Email(
       newUser,
-      `${process.env.FRONT_END_BASE_URL}/dashboard/settings`
-    ).sendWelcome();
+      `${process.env.FRONT_END_BASE_URL}/auth/activate?token=${activationToken}`
+    ).sendEmailActivationToken();
 
-    //TODO: dont sign token and wait on email validation
-    createSendToken(newUser, 201, res);
+    res.status(200).json({
+      status: "Success",
+      message:
+        "Signed up successfully, please activate your account, an email was sent to you",
+    });
+
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
+  }
+};
+
+export const activateEmail = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    console.log("activating");
+    const { token } = req.body;
+    console.log({ token });
+    const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+
+    const user = await prisma.user.findFirst({
+      where: {
+        emailActivationToken: hashedToken,
+      },
+    });
+
+    if (!user) {
+      return next(
+        new AppError(
+          "It seems that the token provided is invalid, please verify that you followed the right link",
+          404
+        )
+      );
+    }
+    createSendToken(user, 200, res);
   } catch (err: any) {
     next(new AppError(err.message, 500));
   }

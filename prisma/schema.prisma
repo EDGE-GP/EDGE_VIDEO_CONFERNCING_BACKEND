@@ -68,6 +68,7 @@ model User {
   bio                  String?
   location             String?
   active               Boolean        @default(false)
+  emailActivationToken String?
 }
 
 model Friendship {

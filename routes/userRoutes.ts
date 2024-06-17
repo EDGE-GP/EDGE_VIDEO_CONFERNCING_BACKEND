@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  activateEmail,
   changeUserPassword,
   forgotPassword,
   login,
@@ -41,6 +42,7 @@ import { resizeUserPhoto, uploadUserPhoto } from "../utils/FileUpload";
 const router: Router = Router();
 
 router.post("/register", validateData(signupSchema), signup);
+router.post("/activate", activateEmail);
 router.post("/login", validateData(loginSchema), login);
 router.post(
   "/forgot-password",

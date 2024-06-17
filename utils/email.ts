@@ -80,6 +80,12 @@ class Email {
       "Your password reset token (valid for only 10 minutes)"
     );
   }
+  async sendEmailActivationToken() {
+    await this.send(
+      "activateAccount",
+      "Welcome to Edge: please activate your account"
+    );
+  }
 }
 
 export default Email;

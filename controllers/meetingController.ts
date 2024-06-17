@@ -1,3 +1,4 @@
+//TODO: only address verified users
 import AppError from "../utils/AppError";
 import prisma from "../prisma";
 import { Meeting } from "@prisma/client";
