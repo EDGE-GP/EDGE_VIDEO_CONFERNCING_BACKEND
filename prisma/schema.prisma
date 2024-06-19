@@ -69,6 +69,7 @@ model User {
   location             String?
   active               Boolean        @default(false)
   emailActivationToken String?
+  Message              Message[]
 }
 
 model Friendship {
@@ -100,6 +101,8 @@ model Meeting {
   privacyStatus     PrivacyStatus   @default(public)
   Invitation        Invitation[]
   language          MeetingLanguage @default(English)
+  Message           Message[]
+  password          String?
 }
 
 model Invitation {
@@ -125,5 +128,14 @@ model Notification {
   user      User             @relation(fields: [userId], references: [id])
 }
 
-//TODO: migrate changes in the notifications model
-//TODO: create cconversations and messages models
+model Message {
+  id            String   @id @default(uuid())
+  content       String
+  senderId      String
+  sender        User     @relation(fields: [senderId], references: [id])
+  isInterpreted Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  meeting       Meeting  @relation(fields: [meetingId], references: [id])
+  meetingId     String
+}

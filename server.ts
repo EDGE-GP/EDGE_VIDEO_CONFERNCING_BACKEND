@@ -2,6 +2,7 @@ import express, { Express, Request, Response, Application } from "express";
 import dotenv from "dotenv";
 import app from "./app";
 import { Socket, Server as SocketIOServer } from "socket.io";
+import { User } from "@prisma/client";
 
 //For env File
 dotenv.config({
@@ -32,11 +33,51 @@ io.on("connection", (socket: Socket) => {
 
   userSockets[id] = socket.id;
   console.log(userSockets);
+  socket.on(
+    "joinMeeting",
+    ({ meetingId, signer }: { meetingId: string; signer: boolean }) => {
+      if (!meetingId) {
+        socket.disconnect(true);
+        return;
+      }
+
+      console.log(`User ${id} joining meeting ${meetingId}`);
+      socket.data.signer = signer;
+
+      socket.join(meetingId);
+      const room = io.sockets.adapter.rooms.get(meetingId);
+      console.log({ room });
+      if (room) {
+        room.forEach((socketId) => {
+          const participantSocket = io.sockets.sockets.get(socketId);
+          if (participantSocket) {
+            if (participantSocket.data.signer) {
+              console.log(`User ${socket.id} is a signer`);
+            } else {
+              console.log(`User ${socket.id} is not a signer`);
+            }
+          }
+        });
+      }
+    }
+  );
+
   socket.on("disconnect", () => {
     console.log(`User ${id} disconnected`);
+
+    // Remove user from all rooms they are part of
+    for (const room of socket.rooms) {
+      if (room !== socket.id) {
+        socket.leave(room);
+        console.log(`User ${id} left meeting ${room}`);
+      }
+    }
+
     delete userSockets[id];
+    console.log(userSockets);
   });
 });
+
 io.on("connect_error", (error: any) => {
   console.error("Socket.IO connection error:", error);
 });

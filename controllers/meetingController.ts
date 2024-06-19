@@ -32,6 +32,14 @@ const generateRandomString = async (): Promise<string> => {
 
   return randomString;
 };
+const generateRandomPrivateMeetingPassword = (): string => {
+  let randomString = "";
+  for (let i = 0; i < 6; i++) {
+    const randomCharCode = Math.floor(Math.random() * 26) + 65;
+    randomString += String.fromCharCode(randomCharCode);
+  }
+  return randomString;
+};
 
 export const scheduleMeeting = async (
   req: Request,
@@ -66,6 +74,10 @@ export const scheduleMeeting = async (
         privacyStatus,
         conferenceId: await generateRandomString(),
         organizerId: user.id,
+        password:
+          privacyStatus === "private"
+            ? generateRandomPrivateMeetingPassword()
+            : null,
         participants: {
           connect: {
             id: user.id,
@@ -166,6 +178,7 @@ export const getMeeting = async (
             name: true,
             email: true,
             avatar: true,
+            active: true,
           },
         },
       },
@@ -262,6 +275,7 @@ export const handleMeetingInvitation = async (
             name: true,
             email: true,
             avatar: true,
+            active: true,
           },
         },
       },
@@ -305,6 +319,8 @@ export const fetchUserMeetingInvitations = async (
             organizerId: true,
             startTime: true,
             title: true,
+            password: true,
+
             participants: {
               orderBy: {
                 createdAt: "desc",
@@ -363,6 +379,13 @@ export const fetchUserMeetings = async (
       },
       include: {
         participants: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            active: true,
+          },
           orderBy: {
             createdAt: "desc",
           },
@@ -405,35 +428,58 @@ export const joinMeeting = async (
   try {
     const { user } = req;
     const { conferenceId } = req.body;
-    let meeting: Meeting | null = await prisma.meeting.findUnique({
+    let meeting = await prisma.meeting.findUnique({
       where: {
         conferenceId,
-        OR: [
-          { participants: { some: { id: user.id } } },
-          {
-            Invitation: {
-              some: { userId: user.id, meeting: { conferenceId } },
-            },
-          },
-        ],
       },
       include: {
+        Invitation: true,
+        organizer: true,
         participants: {
           select: {
             id: true,
             name: true,
             email: true,
             avatar: true,
+            active: true,
           },
         },
       },
     });
-    console.log({ conferenceId });
     if (!meeting) {
       return next(
         new AppError("No meeting found with the provided conference id", 404)
       );
     }
+    if (meeting?.privacyStatus === "public") {
+      res.status(200).json({
+        status: "success",
+        data: {
+          meeting,
+          passwordRequirment: false,
+        },
+      });
+    } else if (
+      meeting?.participants.some((participant) => participant.id === user.id) ||
+      meeting?.Invitation.some((invitation) => invitation.userId === user.id)
+    ) {
+      res.status(200).json({
+        status: "success",
+        data: {
+          meeting,
+          passwordRequirment: false,
+        },
+      });
+    } else if (meeting.privacyStatus === "private") {
+      res.status(200).json({
+        status: "success",
+        data: {
+          meeting,
+          passwordRequirment: true,
+        },
+      });
+    }
+
     //TODO: manage active participants using sockets, if meeting current time is greater than start time plus 15 minutes, do not allow join
     res.status(200).json({
       status: "success",
@@ -477,6 +523,10 @@ export const createInstantMeeting = async (
         conferenceId,
         privacyStatus,
         organizerId: user.id,
+        password:
+          privacyStatus === "private"
+            ? generateRandomPrivateMeetingPassword()
+            : null,
         participants: {
           connect: [
             { id: user.id },
@@ -551,6 +601,54 @@ export const createInstantMeeting = async (
         meeting,
         invitations,
         notifications,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+
+export const checkMeetingPassword = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { meetingId, password } = req.body;
+    //check user password if it is correct and if the user is in the participants list or in the invitations list
+    const meeting = await prisma.meeting.findFirst({
+      where: {
+        id: meetingId,
+        password,
+        OR: [
+          { participants: { some: { id: user.id } } },
+          {
+            Invitation: {
+              some: { userId: user.id, meeting: { id: meetingId } },
+            },
+          },
+        ],
+      },
+      include: {
+        participants: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+            active: true,
+          },
+        },
+      },
+    });
+    if (!meeting) {
+      return next(new AppError("password is incorrect", 401));
+    }
+    res.status(200).json({
+      status: "success",
+      data: {
+        meeting,
       },
     });
   } catch (error: any) {

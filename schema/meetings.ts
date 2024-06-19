@@ -42,3 +42,8 @@ export const handleMeetingInvitationsSchema = z.object({
 export const joinMeetingSchema = z.object({
   conferenceId: z.string().length(14),
 });
+
+export const checkMeetingPasswordSchema = z.object({
+  meetingId: z.string().length(14),
+  password: z.string().min(1),
+});

@@ -9,6 +9,7 @@ import {
   fetchUserMeetings,
   joinMeeting,
   createInstantMeeting,
+  checkMeetingPassword,
 } from "../controllers/meetingController";
 import { validateData } from "../middleware/validation";
 import {
@@ -35,5 +36,5 @@ router.post(
   createInstantMeeting
 );
 router.get("/:id", getMeeting);
-
+router.post("/check-password", checkMeetingPassword);
 export default router;

@@ -184,7 +184,6 @@ export const signup = async (
       message:
         "Signed up successfully, please activate your account, an email was sent to you",
     });
-
   } catch (err: any) {
     next(new AppError(err.message, 500));
   }
@@ -215,6 +214,12 @@ export const activateEmail = async (
         )
       );
     }
+
+    new Email(
+      user,
+      `${process.env.FRONT_END_BASE_URL}/dashboard/settings`
+    ).sendEmailActivationToken();
+
     createSendToken(user, 200, res);
   } catch (err: any) {
     next(new AppError(err.message, 500));

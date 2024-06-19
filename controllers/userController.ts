@@ -143,6 +143,7 @@ export const searchUsers = async (
         name: true,
         email: true,
         avatar: true,
+        active: true,
         location: true,
         bio: true,
         notifyEmail: true,
@@ -365,6 +366,7 @@ export const blockUser = async (
         name: true,
         email: true,
         avatar: true,
+        active: true,
         blockedUsers: {
           select: {
             id: true,
@@ -774,6 +776,7 @@ export const addFriendshipsSearch = async (
         name: true,
         email: true,
         avatar: true,
+        active: true,
         bio: true,
         notifyEmail: true,
         location: true,
@@ -917,6 +920,7 @@ export const updatePersonalInformation = async (
         name: true,
         email: true,
         avatar: true,
+        active: true,
         bio: true,
         location: true,
         notifyEmail: true,
