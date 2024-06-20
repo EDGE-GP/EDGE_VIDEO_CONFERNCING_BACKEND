@@ -1,4 +1,5 @@
 import {
+  Friendship,
   Meeting,
   MeetingLanguage,
   PrismaClient,
@@ -49,6 +50,13 @@ prisma.$use(async (params, next) => {
     return user;
   };
 
+  // const processNotification = (notification: Notification) => {
+  //   if (notification.badge) {
+  //     notification.badge = `${process.env.BASE_URL}/public/uploads/users/${notification.badge}`;
+  //   }
+  //   return notification;
+  // };
+
   const processMeeting = (meeting: any) => {
     if (meeting.participants) {
       console.log({ participants: meeting.participants });
@@ -57,6 +65,15 @@ prisma.$use(async (params, next) => {
         .filter((user: User) => user !== null);
     }
     return meeting;
+  };
+  const processInvitation = (invitation: any) => {
+    if (invitation.participants) {
+      console.log({ participants: invitation.participants });
+      invitation.participants = invitation.participants
+        .map(processUser)
+        .filter((user: User) => user !== null);
+    }
+    return invitation;
   };
 
   if (params.model === "User" && result) {
@@ -72,6 +89,28 @@ prisma.$use(async (params, next) => {
       return result.map(processMeeting);
     } else {
       return processMeeting(result);
+    }
+  }
+  if (params.model === "Invitation" && result) {
+    if (Array.isArray(result)) {
+      return result.map(processInvitation);
+    } else {
+      return processInvitation(result);
+    }
+  }
+  if (params.model === "Friendship" && result) {
+    if (Array.isArray(result)) {
+      return result.map((friendship) => {
+        if (friendship.friend) {
+          friendship.friend = processUser(friendship.friend);
+        }
+        return friendship;
+      });
+    } else {
+      if (result.friend) {
+        result.friend = processUser(result.friend);
+      }
+      return result;
     }
   }
 

@@ -15,9 +15,7 @@ export const getAllUsers = async (
   next: NextFunction
 ) => {
   try {
-    const users: User[] = await prisma.user
-      .findMany()
-      .then((users) => users.map((user) => parseAvatarURL(req, user)));
+    const users: User[] = await prisma.user.findMany();
 
     res.status(200).json({
       status: "success",
@@ -203,6 +201,7 @@ export const createFriendshipRequest = async (
       data: {
         message: `${user.name} sent you a friend request`,
         type: "friendshipRequest",
+        badge: user.avatar,
         userId,
       },
     });
@@ -539,13 +538,23 @@ export const getUserFriendships = async (
             return {
               id: friendship.id,
               status: friendship.status,
-              user: friendship.user2,
+              user: {
+                ...friendship.user2,
+                avatar: friendship.user2.avatar
+                  ? `${process.env.BASE_URL}/public/uploads/users/${friendship.user2.avatar}`
+                  : null,
+              },
             };
           } else {
             return {
               id: friendship.id,
               status: friendship.status,
-              user: friendship.user1,
+              user: {
+                ...friendship.user1,
+                avatar: friendship.user1.avatar
+                  ? `${process.env.BASE_URL}/public/uploads/users/${friendship.user1.avatar}`
+                  : null,
+              },
             };
           }
         }),
@@ -612,7 +621,12 @@ export const getFriendshipRequests = async (
           return {
             id: friendshipRequest.id,
             status: friendshipRequest.status,
-            user: friendshipRequest.user1,
+            user: {
+              ...friendshipRequest.user1,
+              avatar: friendshipRequest.user1.avatar
+                ? `${process.env.BASE_URL}/public/uploads/users/${friendshipRequest.user1.avatar}`
+                : null,
+            },
           };
         }),
       },

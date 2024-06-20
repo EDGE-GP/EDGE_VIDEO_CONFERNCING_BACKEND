@@ -1,7 +1,7 @@
 //TODO: only address verified users
 import AppError from "../utils/AppError";
 import prisma from "../prisma";
-import { Meeting } from "@prisma/client";
+import { Meeting, User } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import { io } from "../server";
 import { sendNotificationToUser } from "../utils/NotificationService";
@@ -355,7 +355,22 @@ export const fetchUserMeetingInvitations = async (
     res.status(200).json({
       status: "success",
       data: {
-        invitations,
+        invitations: invitations.map((invitation) => {
+          return {
+            ...invitation,
+            meeting: {
+              ...invitation.meeting,
+              participants: invitation.meeting.participants.map(
+                (participant) => {
+                  return {
+                    ...participant,
+                    avatar: participant.avatar? `${process.env.BASE_URL}/public/uploads/users/${participant.avatar}` : null,
+                  };
+                }
+              ),
+            },
+          };
+        }),
       },
     });
   } catch (error: any) {
@@ -449,6 +464,20 @@ export const joinMeeting = async (
     if (!meeting) {
       return next(
         new AppError("No meeting found with the provided conference id", 404)
+      );
+    }
+    const room = io.sockets.adapter.rooms.get(meeting.id);
+
+    const isPast =
+      new Date() > new Date(meeting.startTime.getTime() + 15 * 60 * 1000);
+    console.log({
+      room,
+      size: room?.size,
+      isPast,
+    });
+    if (isPast && (!room || room?.size === 0)) {
+      return next(
+        new AppError("The meeting you are trying to join is expired", 404)
       );
     }
     if (meeting?.privacyStatus === "public") {
@@ -621,14 +650,6 @@ export const checkMeetingPassword = async (
       where: {
         id: meetingId,
         password,
-        OR: [
-          { participants: { some: { id: user.id } } },
-          {
-            Invitation: {
-              some: { userId: user.id, meeting: { id: meetingId } },
-            },
-          },
-        ],
       },
       include: {
         participants: {
