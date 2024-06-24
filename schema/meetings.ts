@@ -47,3 +47,13 @@ export const checkMeetingPasswordSchema = z.object({
   meetingId: z.string().length(14),
   password: z.string().min(1),
 });
+export const pushMessageSchema = z.object({
+  conferenceId: z.string().length(14),
+  content: z.string(),
+  isInterpreted: z.boolean(),
+});
+
+export const submitRatingSchema = z.object({
+  conferenceId: z.string().length(14),
+  rating: z.number().int().min(1).max(5),
+});

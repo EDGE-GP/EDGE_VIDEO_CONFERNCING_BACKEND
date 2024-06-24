@@ -10,13 +10,20 @@ import {
   joinMeeting,
   createInstantMeeting,
   checkMeetingPassword,
+  pushMessage,
+  fetchConversation,
+  fetchMeetingsConversations,
+  submitRating,
+  getMeetingForRatings,
 } from "../controllers/meetingController";
 import { validateData } from "../middleware/validation";
 import {
   createInstantMeetingSchema,
   handleMeetingInvitationsSchema,
   joinMeetingSchema,
+  pushMessageSchema,
   scheduleMeetingSchema,
+  submitRatingSchema,
 } from "../schema/meetings";
 import { protect } from "../controllers/authController";
 
@@ -35,6 +42,11 @@ router.post(
   validateData(createInstantMeetingSchema),
   createInstantMeeting
 );
-router.get("/:id", getMeeting);
 router.post("/check-password", checkMeetingPassword);
+router.post("/push-message", validateData(pushMessageSchema), pushMessage);
+router.get("/conversations", fetchMeetingsConversations);
+router.get("/conversations/:id", fetchConversation);
+router.get("/rate/:conferenceId", getMeetingForRatings);
+router.post("/rate", validateData(submitRatingSchema), submitRating);
+
 export default router;

@@ -59,7 +59,6 @@ prisma.$use(async (params, next) => {
 
   const processMeeting = (meeting: any) => {
     if (meeting.participants) {
-      console.log({ participants: meeting.participants });
       meeting.participants = meeting.participants
         .map(processUser)
         .filter((user: User) => user !== null);
@@ -68,7 +67,6 @@ prisma.$use(async (params, next) => {
   };
   const processInvitation = (invitation: any) => {
     if (invitation.participants) {
-      console.log({ participants: invitation.participants });
       invitation.participants = invitation.participants
         .map(processUser)
         .filter((user: User) => user !== null);

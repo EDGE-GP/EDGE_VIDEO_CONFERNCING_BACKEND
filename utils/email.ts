@@ -73,6 +73,40 @@ class Email {
   async sendWelcome() {
     await this.send("welcome", "Welcome to Edge");
   }
+  async sendMeetingReminders(meetingName: string) {
+    const html = pug.renderFile(
+      path.join(process.cwd(), `views/emails/meetingReminder.pug`),
+      {
+        firstName: this.firstName,
+        url: this.url,
+        subject: "Meeting reminder",
+        meetingName,
+      }
+    );
+    const mailOptions = {
+      from: this.from,
+      to: this.to,
+      subject: "Meeting reminder",
+      html,
+      text: convert(html),
+    };
+    console.log({
+      html: convert(html),
+    });
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await this.newTransport().sendMail(mailOptions);
+        console.log("Email sent successfully");
+        break;
+      } catch (error: any) {
+        console.error(`Attempt ${attempt} failed: ${error.message}`);
+        if (attempt === 3) {
+          throw error;
+        }
+        await new Promise((res) => setTimeout(res, 2000));
+      }
+    }
+  }
 
   async sendResetToken() {
     await this.send(

@@ -70,6 +70,7 @@ model User {
   active               Boolean        @default(false)
   emailActivationToken String?
   Message              Message[]
+  ratings               Rating[]
 }
 
 model Friendship {
@@ -101,8 +102,9 @@ model Meeting {
   privacyStatus     PrivacyStatus   @default(public)
   Invitation        Invitation[]
   language          MeetingLanguage @default(English)
-  Message           Message[]
+  messages          Message[]
   password          String?
+  ratings            Rating[]
 }
 
 model Invitation {
@@ -138,4 +140,16 @@ model Message {
   updatedAt     DateTime @updatedAt
   meeting       Meeting  @relation(fields: [meetingId], references: [id])
   meetingId     String
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  userId    String
+  meetingId String
+  rating    Int
+  comment   String?
+  user      User     @relation(fields: [userId], references: [id])
+  meeting   Meeting  @relation(fields: [meetingId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

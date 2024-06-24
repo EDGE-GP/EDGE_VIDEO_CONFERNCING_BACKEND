@@ -1,11 +1,10 @@
 //TODO: only address verified users
 import AppError from "../utils/AppError";
 import prisma from "../prisma";
-import { Meeting, User } from "@prisma/client";
+import { Meeting } from "@prisma/client";
 import { Request, Response, NextFunction } from "express";
 import { io } from "../server";
 import { sendNotificationToUser } from "../utils/NotificationService";
-import { RtcRole, RtcTokenBuilder } from "agora-access-token";
 const generateRandomString = async (): Promise<string> => {
   const getRandomUpperCaseLetter = () =>
     String.fromCharCode(Math.floor(Math.random() * 26) + 65); // Random uppercase letter generator
@@ -165,24 +164,17 @@ export const getMeeting = async (
   next: NextFunction
 ) => {
   try {
-    const meetingID = req.params.id;
+    const { conferenceId } = req.params;
     const meeting: Meeting | null = await prisma.meeting.findUnique({
       where: {
-        id: meetingID,
-      },
-      //include participants without their password
-      include: {
-        participants: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            avatar: true,
-            active: true,
-          },
-        },
+        conferenceId,
       },
     });
+    if (!meeting) {
+      return next(
+        new AppError("No meeting found with the provided conference id", 404)
+      );
+    }
     res.status(200).json({
       status: "success",
       data: {
@@ -364,7 +356,9 @@ export const fetchUserMeetingInvitations = async (
                 (participant) => {
                   return {
                     ...participant,
-                    avatar: participant.avatar? `${process.env.BASE_URL}/public/uploads/users/${participant.avatar}` : null,
+                    avatar: participant.avatar
+                      ? `${process.env.BASE_URL}/public/uploads/users/${participant.avatar}`
+                      : null,
                   };
                 }
               ),
@@ -410,6 +404,7 @@ export const fetchUserMeetings = async (
             },
           },
         },
+        messages: true,
       },
       orderBy: {
         createdAt: "desc",
@@ -427,7 +422,12 @@ export const fetchUserMeetings = async (
       status: "success",
       length: meetings.length,
       data: {
-        meetings,
+        meetings: meetings.map((meeting) => {
+          return {
+            ...meeting,
+            includeConversation: meeting.messages.length > 0,
+          };
+        }),
       },
     });
   } catch (error: any) {
@@ -466,7 +466,8 @@ export const joinMeeting = async (
         new AppError("No meeting found with the provided conference id", 404)
       );
     }
-    const room = io.sockets.adapter.rooms.get(meeting.id);
+    console.log({ meeting });
+    const room = io.sockets.adapter.rooms.get(meeting.conferenceId);
 
     const isPast =
       new Date() > new Date(meeting.startTime.getTime() + 15 * 60 * 1000);
@@ -677,5 +678,229 @@ export const checkMeetingPassword = async (
   }
 };
 
-//TODO: edit meeting
-//TODO: manage conversations with meetings
+export const pushMessage = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { content, conferenceId, isInterpreted } = req.body;
+    const meeting = await prisma.meeting.findUnique({
+      where: {
+        conferenceId,
+      },
+    });
+    if (!meeting) {
+      return next(
+        new AppError("No meeting found with the provided conference id", 404)
+      );
+    }
+    const message = await prisma.message.create({
+      data: {
+        content,
+        isInterpreted,
+        meetingId: meeting.id,
+        senderId: user.id,
+      },
+    });
+    res.status(200).json({
+      status: "success",
+      message,
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+export const fetchConversation = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { id } = req.params;
+
+    const meeting = await prisma.meeting.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    if (!meeting) {
+      return next(
+        new AppError("No meeting found with the provided conference id", 404)
+      );
+    }
+
+    const messages = await prisma.message.findMany({
+      where: {
+        meetingId: meeting.id,
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+    const processUserMessages = messages.map((message) => {
+      return {
+        ...message,
+        sender: {
+          ...message.sender,
+          avatar: message.sender.avatar
+            ? `${process.env.BASE_URL}/public/uploads/users/${message.sender.avatar}`
+            : null,
+        },
+      };
+    });
+    const messageGroups: any[] = [];
+    let currentGroup: any = { sender: null, messages: [] };
+
+    for (const message of processUserMessages) {
+      if (message.senderId !== currentGroup.sender?.id) {
+        if (currentGroup.messages.length) {
+          messageGroups.push(currentGroup);
+        }
+        currentGroup = { sender: message.sender, messages: [message] };
+      } else {
+        currentGroup.messages.push(message);
+      }
+    }
+
+    if (currentGroup.messages.length) {
+      messageGroups.push(currentGroup);
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        messageGroups,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+
+export const fetchMeetingsConversations = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const meetings = await prisma.meeting.findMany({
+      where: {
+        participants: {
+          some: {
+            id: user.id,
+          },
+        },
+        messages: {
+          some: {},
+        },
+      },
+      include: {
+        participants: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+    if (!meetings) {
+      next(new AppError("No conversations found for that user", 404));
+    }
+    res.status(200).json({
+      status: "success",
+      data: {
+        meetings,
+        length: meetings.length,
+      },
+    });
+  } catch (err: any) {
+    next(new AppError(err.message, 500));
+  }
+};
+
+export const submitRating = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { rating, conferenceId, comment } = req.body;
+    const { user } = req;
+    const meeting = await prisma.meeting.findUnique({
+      where: {
+        conferenceId,
+      },
+    });
+    if (!meeting) {
+      return next(
+        new AppError("No meeting found with the provided conference id", 404)
+      );
+    }
+    const ratingRecord = await prisma.rating.create({
+      data: {
+        rating,
+        comment,
+        meetingId: meeting.id,
+        userId: user.id,
+      },
+    });
+    res.status(201).json({
+      status: "success",
+      data: {
+        rating: ratingRecord,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};
+export const getMeetingForRatings = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const { user } = req;
+    const { conferenceId } = req.params;
+    const meeting: Meeting | null = await prisma.meeting.findUnique({
+      where: {
+        conferenceId,
+        ratings: {
+          none: {
+            userId: user.id,
+          },
+        },
+      },
+    });
+    if (!meeting) {
+      return next(
+        new AppError("No meeting found with the provided conference id", 404)
+      );
+    }
+    res.status(200).json({
+      status: "success",
+      data: {
+        meeting,
+      },
+    });
+  } catch (error: any) {
+    next(new AppError(error.message, 500));
+  }
+};

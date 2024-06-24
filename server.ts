@@ -35,26 +35,69 @@ io.on("connection", (socket: Socket) => {
   console.log(userSockets);
   socket.on(
     "joinMeeting",
-    ({ meetingId, signer }: { meetingId: string; signer: boolean }) => {
-      if (!meetingId) {
+    ({ conferenceId, signer }: { conferenceId: string; signer: boolean }) => {
+      if (!conferenceId) {
         socket.disconnect(true);
         return;
       }
+      console.log({ signer, conferenceId });
 
-      console.log(`User ${id} joining meeting ${meetingId}`);
+      console.log(`User ${id} joining meeting ${conferenceId}`);
       socket.data.signer = signer;
 
-      socket.join(meetingId);
-      const room = io.sockets.adapter.rooms.get(meetingId);
+      socket.join(conferenceId);
+      const room = io.sockets.adapter.rooms.get(conferenceId);
       console.log({ room });
       if (room) {
         room.forEach((socketId) => {
           const participantSocket = io.sockets.sockets.get(socketId);
           if (participantSocket) {
             if (participantSocket.data.signer) {
-              console.log(`User ${socket.id} is a signer`);
+              console.log(`User ${socketId} is a signer`);
             } else {
-              console.log(`User ${socket.id} is not a signer`);
+              console.log(`User ${socketId} is not a signer`);
+            }
+          }
+        });
+      }
+    }
+  );
+  socket.on(
+    "sendSigns",
+    ({ conferenceId, message }: { conferenceId: string; message: string }) => {
+      console.log(
+        `sneding sign: ${message} from ${socket.id} to ${conferenceId}`
+      );
+      socket.to(conferenceId).emit("signsMessage", { message });
+    }
+  );
+  socket.on("sendDummySignsSigns", ({ message }) => {
+    console.log(`sending sign: ${message} from ${socket.id} to all rooms`);
+
+    const sockets = io.sockets.sockets;
+    sockets.forEach((s) => {
+      s.rooms.forEach((room) => {
+        console.log(room, s.id, message);
+        if (room !== s.id) {
+          // Exclude the default room of the socket
+          io.to(room).emit("signsMessage", { message });
+        }
+      });
+    });
+  });
+  socket.on(
+    "sendSpeech",
+    ({ conferenceId, message }: { conferenceId: string; message: string }) => {
+      const room = io.sockets.adapter.rooms.get(conferenceId);
+      if (room) {
+        room.forEach((socketId) => {
+          const participantSocket = io.sockets.sockets.get(socketId);
+          if (participantSocket) {
+            if (participantSocket.data.signer) {
+              console.log(
+                `sending speech: ${message} from ${socket.id} to ${conferenceId}`
+              );
+              participantSocket.emit("speechMessage", { message });
             }
           }
         });
