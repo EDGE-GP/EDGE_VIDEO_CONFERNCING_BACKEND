@@ -135,9 +135,6 @@ export const login = async (
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return next(new AppError("Incorrect email or password", 401));
     }
-    if (!user.active) {
-      return next(new AppError("Please activate your account first", 400));
-    }
     createSendToken(user, 200, res);
   } catch (err: any) {
     next(new AppError(err.message, 500));
@@ -171,13 +168,15 @@ export const signup = async (
         email: email,
         password: hashedPassword,
         emailActivationToken,
+        active: true,
       },
     });
+    createSendToken(newUser, 200, res);
 
-    new Email(
-      newUser,
-      `${process.env.FRONT_END_BASE_URL}/auth/activate?token=${activationToken}`
-    ).sendEmailActivationToken();
+    // new Email(
+    //   newUser,
+    //   `${process.env.FRONT_END_BASE_URL}/auth/activate?token=${activationToken}`
+    // ).sendEmailActivationToken();
 
     res.status(200).json({
       status: "Success",

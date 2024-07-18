@@ -41,9 +41,6 @@ prisma.$use(async (params, next) => {
   const result = await next(params);
 
   const processUser = (user: User) => {
-    if (!user.active) {
-      return null;
-    }
     if (user.avatar) {
       user.avatar = `${process.env.BASE_URL}/public/uploads/users/${user.avatar}`;
     }
